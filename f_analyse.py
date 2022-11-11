@@ -16,7 +16,7 @@ class C_signal :
     - `std()`
     - `max()`
     - `min()`
-    - `val_at(t:)`
+    - `val_at_nearest_t(t:)`
     - `t_at_max()`
     - `t_at_min()`
     - `duration()`
@@ -61,13 +61,26 @@ class C_signal :
     def std(self)-> float : return np.std(self.data)
     def max(self)-> float : return np.max(self.data)
     def min(self)-> float : return np.min(self.data)
-    def val_at(self,t: float)-> float : return self.data[int(t*self.fs)]
+    def val_at_nearest_t(self,t: float)-> float : return self.data[int(t*self.fs)]
     def t_at_max(self)-> float : return np.argmax(self.data) / self.fs
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
     def duration(self)-> float : return len(self.data)/self.fs
 
-    # def plot() : pass
-    def plot_fft(): pass
+    # # def plot() : pass
+    # def plot_fft(self):
+    #     # FFT avec 0 padding sur N
+    #     plt.figure()
+    #     n=4096
+    #     n=200
+    #     yf = np.fft.fft(self.data,n)
+    #     xf = np.fft.fftfreq()
+    #     xf = np.linspace(0,self.fs/2,n//2-1)
+    #     yf_real = 2/np.size(max_spectro)*np.abs(yf[0:n//2-1])
+    #     plt.plot(xf,yf_real)
+    #     # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
+    #     # division par la taille de max_spectro pour prendre en compte le pas 
+
+
     def plot_ADD_box_on_recut() : pass
     def plot_ADD_box_on_fft_recut() : pass
     def plot_ADD_mean_on_recut() : pass
@@ -160,34 +173,35 @@ class C_signal :
     #     return rep 
 
 
-    def plot(self,      color=None,
-                        close=True,
-                        draw_points=False,
-                        axis_label=True,
-                        linewidth=None,
-                        add_to_title='',
-                        new_unit : tuple[str,float]|None = None):
-        
-        unit = self.unit if new_unit is None else new_unit[0]
-        data = self.data if new_unit is None else self.data*new_unit[1]
+    # def plot(self,      color=None,
+    #                     close=True,
+    #                     draw_points=False,
+    #                     axis_label=True,
+    #                     linewidth=None,
+    #                     add_to_title='',
+    #                     new_unit : tuple[str,float] = None):
 
-        if close : plt.close('all')
+
+    def plot(   self,
+                add_to_title='',
+                new_unit : tuple[str,float] = None,
+                **kwargs):
+
+        # TODO create a unit class
+        
+        unit = self.unit 
+        data = self.data
+        if new_unit is not None :
+            unit = new_unit[0]
+            data = data*new_unit[1]
+
         plt.grid(True)
         N = len(data)
         X=np.linspace(start=0 , stop=N/self.fs, num=N)
-        plt.plot(X,data,
-            color=color,
-            label = f"{self.name}",
-            linewidth=linewidth)
 
-        if draw_points :
-            plt.plot(X,data,'.r',
-                label = f"{self.name} (points de mesure)")
-
-        if axis_label :
-            plt.xlabel("time (s)")
-            plt.ylabel(f"Amplitude ({unit})")
-        
+        plt.plot(X, data,label = f"{self.name}",**kwargs)
+        plt.xlabel("time (s)")
+        plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name}")
 
     # def plot_FFT(self,      color=None,
