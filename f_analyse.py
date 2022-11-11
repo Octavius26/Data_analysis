@@ -7,6 +7,8 @@ from scipy.fft import fft, fftfreq
 from scipy.signal import filtfilt,firwin
 from scipy.interpolate import interp1d 
 
+
+
 class C_signal :
     """
     Methods
@@ -26,6 +28,9 @@ class C_signal :
     - `plot_fft()`
     - `plot_study_domain()`
 
+    Who add something on a plot :
+    - `plot_ADD_box_on_recut`
+
     Who return a signal :
     - `recut()`
     - `copy()`
@@ -33,8 +38,8 @@ class C_signal :
 
 
     def __init__(           self,
-                            data : np.ndarray | list,
-                            fs : float,
+                            data : np.ndarray | list = None,
+                            fs : float = 1,
                             unit : str = '',
                             name : str = ''):
         """
@@ -45,13 +50,11 @@ class C_signal :
         `unit` : unit of the signal
         `name` : name of the signal
         """
-        match type(data):
-            case np.ndarray :
-                self.data = data 
-            case _ :
-                if data is None : 
-                    warn("Data = None")
-                else : self.data = np.array(data)
+
+        if data is None : self.data = None
+        elif type(data)==np.ndarray : self.data = data 
+        elif type(data)==list : self.data = np.array(data)
+        else : warn("Wrong data type")
 
         self.fs = fs
         self.unit = unit
@@ -66,14 +69,20 @@ class C_signal :
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
     def duration(self)-> float : return len(self.data)/self.fs
 
+
+
     # def plot() : pass
-    def plot_fft(self,n=None):
+    def plot_fft(self,n: int=None,n_factor: float=None):
         """
         Args 
         -----
-        - `n`: Size of the signal after zero padding. It's need `n`>= len(data)
+        `n`: int (optional)
+            Size of the signal after zero padding. It's need `n`>= len(data)
+        `n_factor` : float (optional)
+            If not None, `n`=len(data)*`n_factor`
         """
         if n is None : n = len(self.data)
+        if n_factor is not None : n= len(self.data) * n_factor
 
         if n < len(self.data):
             print("n is smaller than self.data, we use n=len(self.data) instead")
@@ -90,11 +99,52 @@ class C_signal :
         plt.plot(xf,yf_real)
 
 
-    def plot_ADD_box_on_recut() : pass
-    def plot_ADD_box_on_fft_recut() : pass
+    def plot_ADD_box_on_recut(self,t1: float,t2: float,**kwargs) : 
+        yh = self.recut(t1,t2).max()
+        yl = self.recut(t1,t2).min()
+        e = yh-yl
+        yh += e * 0.1 # to set the upper margin
+        yl -= e * 0.1 # to set the lower margin
+        X = [t1,t2,t2,t1,t1]
+        Y = [yh,yh,yl,yl,yh]
+        plt.plot(X,Y,'--',**kwargs)
+
+    def plot_ADDfft_box_on_recut(self,f1,f2) : pass
+    def plot_ADDfft_freqs(self,freqs : list[float]) : pass
     def plot_ADD_mean_on_recut() : pass
     
-    def recut(self) : pass
+    def index_at(self,t: float):
+        """
+        Args
+        ------
+        `t` : flaot
+            Time for which the nearest index is caluclated
+        """
+        return int(t*self.fs)
+
+
+    def recut(self,t1: float=0,t2: float=None) :
+        """
+        Args
+        -----
+        `t1` : float
+            Beginning of the recuted signal
+        `t2` : float (optional)
+            End of the recuted signal, use None to keep the signal until the end
+        """
+        if t2 is None : t2 = self.duration()
+        i1,i2 = self.index_at(t1), self.index_at(t2)
+        rep = self.empty_copy()
+        rep.data = self.data[i1:i2]
+        rep.name += ' recuted'
+        return rep
+
+    def empty_copy(self):
+        """Copy everything exept data"""
+        return C_signal(data = None,
+                        fs = self.fs,
+                        unit = self.unit,
+                        name = self.name)
 
     def copy(self):
         return C_signal(data = self.data.copy(),
@@ -155,31 +205,31 @@ class C_signal :
     #     return rep
 
 
-    # def re_cut( self,
-    #             t1:float|None = None,
-    #             t2:float|None = None    ):
-    #     """
-    #     Cette fonction rend un copie recoupée du signal
+    def re_cut( self,
+                t1:float|None = None,
+                t2:float|None = None    ):
+        """
+        Cette fonction rend un copie recoupée du signal
 
-    #     args
-    #     ----
-    #     `t1` = temps de début (en s)  
+        args
+        ----
+        `t1` = temps de début (en s)  
 
-    #     `t2` = temps de fin (en s)
+        `t2` = temps de fin (en s)
 
-    #     return
-    #     ------
-    #     `signal_recut` = a copy of the original signal but recuted
-    #     """
-    #     rep = self.copy()
-    #     rep.name += " re_cut"
+        return
+        ------
+        `signal_recut` = a copy of the original signal but recuted
+        """
+        rep = self.copy()
+        rep.name += " re_cut"
         
-    #     if t1 is None: t1=0
+        if t1 is None: t1=0
         
-    #     if t2 is None: rep.data = rep.data[ int(t1*self.fs) : ]
-    #     else : rep.data = rep.data[ int(t1*self.fs) : int(t2*self.fs) ]
+        if t2 is None: rep.data = rep.data[ int(t1*self.fs) : ]
+        else : rep.data = rep.data[ int(t1*self.fs) : int(t2*self.fs) ]
         
-    #     return rep 
+        return rep 
 
 
     # def plot(self,      color=None,
