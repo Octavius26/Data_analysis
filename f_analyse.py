@@ -35,8 +35,8 @@ class C_signal :
     def __init__(           self,
                             data : np.ndarray | list,
                             fs : float,
-                            unit : str,
-                            name : str):
+                            unit : str = '',
+                            name : str = ''):
         """
         Args :
         ------
@@ -66,19 +66,28 @@ class C_signal :
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
     def duration(self)-> float : return len(self.data)/self.fs
 
-    # # def plot() : pass
-    # def plot_fft(self):
-    #     # FFT avec 0 padding sur N
-    #     plt.figure()
-    #     n=4096
-    #     n=200
-    #     yf = np.fft.fft(self.data,n)
-    #     xf = np.fft.fftfreq()
-    #     xf = np.linspace(0,self.fs/2,n//2-1)
-    #     yf_real = 2/np.size(max_spectro)*np.abs(yf[0:n//2-1])
-    #     plt.plot(xf,yf_real)
-    #     # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
-    #     # division par la taille de max_spectro pour prendre en compte le pas 
+    # def plot() : pass
+    def plot_fft(self,n=None):
+        """
+        Args 
+        -----
+        - `n`: Size of the signal after zero padding. It's need `n`>= len(data)
+        """
+        if n is None : n = len(self.data)
+
+        if n < len(self.data):
+            print("n is smaller than self.data, we use n=len(self.data) instead")
+            n=len(self.data)
+
+        # FFT avec 0 padding sur N
+        plt.figure()
+        yf = np.fft.fft(self.data,n)
+        xf = np.linspace(0,self.fs/2,n//2-1)
+        # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
+        yf_real = 2/np.size(self.data)*np.abs(yf[0:n//2-1])
+        # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
+        # division par la taille de max_spectro pour prendre en compte le pas 
+        plt.plot(xf,yf_real)
 
 
     def plot_ADD_box_on_recut() : pass
@@ -183,12 +192,14 @@ class C_signal :
 
 
     def plot(   self,
-                add_to_title='',
                 new_unit : tuple[str,float] = None,
+                add_to_title='',
+                new_figure = True,
                 **kwargs):
 
         # TODO create a unit class
         
+        if new_figure : plt.figure()
         unit = self.unit 
         data = self.data
         if new_unit is not None :
@@ -202,7 +213,7 @@ class C_signal :
         plt.plot(X, data,label = f"{self.name}",**kwargs)
         plt.xlabel("time (s)")
         plt.ylabel(f"Amplitude ({unit})")
-        plt.title(f"{self.name}")
+        plt.title(f"{self.name}"+add_to_title)
 
     # def plot_FFT(self,      color=None,
     #                         label=None,
