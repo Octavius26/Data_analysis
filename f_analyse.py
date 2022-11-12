@@ -32,25 +32,26 @@ class T_Signal :
     -------
         
     Who give a float :
-    - `std()`
-    - `max()`
-    - `min()`
+    - `std`
+    - `max`
+    - `min`
     - `val_at_nearest_t(t:)`
-    - `t_at_max()`
-    - `t_at_min()`
-    - `duration()`
+    - `t_at_max`
+    - `t_at_min`
+    - `duration`
 
     Who plot something :
-    - `plot()`
-    - `plot_fft()`
-    - `plot_study_domain()`
-
-    Who add something on a plot :
+    - `plot`
     - `plot_ADD_box_on_recut`
+    - `plot_ADD_times`
+    - `plot_ADD_values`
 
-    Who return a T_signal :
-    - `recut()`
-    - `copy()`
+    Who return a signal :
+    - `recut`
+    - `copy`
+    - `empty_copy`
+
+    - `fft`
     """
     
 
@@ -58,7 +59,8 @@ class T_Signal :
                             data : np.ndarray | list = None,
                             fs : float = 1,
                             unit : str = '',
-                            name : str = ''):
+                            name : str = '',
+                            t0 : float = 0): #TODO make it fonctional
         """
         Args :
         ------
@@ -76,6 +78,7 @@ class T_Signal :
         self.fs = fs
         self.unit = unit
         self.name = name
+        self.t0 = t0
 
     def mean(self)->float : return np.mean(self.data)
     def std(self)-> float : return np.std(self.data)
@@ -85,11 +88,12 @@ class T_Signal :
     def t_at_max(self)-> float : return np.argmax(self.data) / self.fs
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
     def duration(self)-> float : return len(self.data)/self.fs
+    def t_max(self)-> float : return self.t0 + self.duration()
+    def t_min(self)-> float : return self.t0
 
 
 
-    # def plot() : pass
-    def plot_fft(self,  n: int=None,
+    def plot_fft(self,  n: int=None, 
                         n_factor: float=None,
                         choose_next_power_of_2 = True,
                         print_choices = False,
@@ -114,6 +118,9 @@ class T_Signal :
         `yf_real` : Array
             It is impacted by `dB_mode`
         """
+        # TODO only retrun the fft signal, and make the plot throug it
+        # TODO use apodization windows (hamming,...)
+
         if n is None : n = len(self.data)
         if n_factor is not None : n= len(self.data) * n_factor
 
@@ -153,7 +160,6 @@ class T_Signal :
 
 
 
-    def plot_fft_phase(): pass # TODO plot_fft_phase
 
     def plot_ADD_box_on_recut(self,t1: float,t2: float,**kwargs) : 
         yh = self.recut(t1,t2).max()
@@ -165,10 +171,39 @@ class T_Signal :
         Y = [yh,yh,yl,yl,yh]
         plt.plot(X,Y,'--',**kwargs)
 
-    def plot_ADDfft_box_on_recut(self,f1,f2) : pass
-    def plot_ADDfft_freqs(self,freqs : list[float]) : pass
-    def plot_ADD_mean_on_recut() : pass
-    
+
+    def plot_ADD_mean(self,**kwargs):
+        X = [self.t_max(), self.t_min()]
+        Y = [self.mean()]*2
+        plt.plot(X,Y,'--')
+
+    def plot_ADD_times(self, times:list|np.ndarray, **kwargs):
+        yh = self.max()
+        yl = self.min()
+        e = yh-yl
+        yh += e * 0.1 # to set the upper margin
+        yl -= e * 0.1 # to set the lower margin
+        
+        for time in times :
+            X = [time]*2
+            Y = [yl,yh]
+            plt.plot(X,Y,'--',label=f"t={times}s",**kwargs)
+
+    def plot_ADD_values(self,   l_values:list[float],
+                                l_labels:list[str]=None,
+                                l_colors:list[str]=None,
+                                **kwargs):
+        X = [self.t_max(), self.t_min()]
+        if l_labels is None : l_labels = [None]*len(l_values)
+        if l_colors is None : l_colors = [None]*len(l_values)
+        
+        for value,label,color in zip(l_values,l_labels,l_colors):
+            Y = [value]*2
+            plt.plot(X,Y,'--',label=label,color=color,**kwargs)
+
+
+
+
     def index_at(self,t: float):
         """
         Args
@@ -207,25 +242,6 @@ class T_Signal :
                         unit = self.unit,
                         name = self.name)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def plot(   self,
                 new_unit : tuple[str,float] = None,
                 add_to_title='',
@@ -251,7 +267,7 @@ class T_Signal :
         else : plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name}"+add_to_title)
 
-    def plot_FFT(self,      color=None,
+    def plot_FFT_depreceated(self,      color=None, 
                             label=None,
                             add_50Hz=False,
                             add_freqs : list[float]|None = None,
@@ -309,111 +325,29 @@ class T_Signal :
         plt.xlabel('fréquence (Hz)')
 
 
-    # def study_domain(self,start,end):
-    #     """Cette fonction ajoute un rectangle autour du domaine d'étude choisi sur un graphique pré-existant
-        
-    #     args
-    #     ----
-    #     `start` = temps de début du domaine d'étude (en s)
-        
-    #     `end`   = temps de fin du domaine d'étude (en s)"""
-    #     etude = (start,end)
-    #     M,m = self.max_min(250000,-250000) ; A  = M-m
-    #     max_e,min_e = self.re_cut(start,end).max_min(250000,-250000)
-    #     max_e += A/10 ; min_e -= A/10
-    #     x_etude = [etude[0],etude[0],etude[1],etude[1],etude[0]]
-    #     y_etude = [min_e,max_e,max_e,min_e,min_e]
-    #     self.plot()
-    #     plt.plot(x_etude,y_etude,'--',color='black',label="domaine d'étude")
-    #     plt.legend()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class Filter :    
-    def FIR(            signal : T_Signal | list[T_Signal],
-                        order : int,
-                        cutoff : float | list[float],
-                        window : str = 'hamming',
-                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> T_Signal | list[T_Signal]:
-        if order == 0:
-            return signal
-
-        if type(signal) == T_Signal : 
-            if type_filtre == 'low_pass':
-                pass_zero = True 
-            elif type_filtre == 'high_pass':
-                pass_zero = False
-
-
-            num_coef = firwin(
-                numtaps = order+1,
-                cutoff = cutoff,
-                window = window,
-                pass_zero = pass_zero,
-                fs = signal.fs)
-            y = filtfilt(num_coef, 1, signal.data)
-            signal_f = T_Signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
-            return signal_f
-        
-        res = []
-        for sig in signal :
-            sig_f = Filter.FIR(
-                signal = sig,
-                order = order,
-                cutoff = cutoff,
-                window = window,
-                type_filtre = type_filtre)
-
-            res.append(sig_f)
-        return res
-
-
-
-
-class FFT_signal(T_Signal):
+class F_signal(T_Signal):
     """
     Methods
     -------
         
     Who give a float :
-    - `std()`
-    - `max()`
-    - `min()`
-    - `val_at_nearest_t(t:)`
-    - `t_at_max()` => `f_at_max()`
-    - `t_at_min()` => `f_at_min()`
-    - `duration()` => `f_range()`
+    o- `std()`
+    o- `mean()`
+    o- `max()`
+    o- `min()`
+    o- `val_at_nearest_t` => `val_at_nearest_f`
+    o- `t_at_max` => `f_at_max`
+    o- `t_at_min` => `f_at_min`
+    o- `duration` => `f_range`
 
     Who plot something :
-    - `plot()`
-    - `plot_fft()` => UNAVAIBLE
-    - `plot_study_domain()`
-
-    Who add something on a plot :
-    - `plot_ADD_box_on_recut`
+    o- `plot()`
+    o- `plot_ADD_box_on_recut`
+    - `plot_ADD_freqs`
+    - `plot_ADD_values`
+    - ``
 
     Who return a T_signal :
     - `recut()`
@@ -429,7 +363,15 @@ class FFT_signal(T_Signal):
         `name` : name of the signal
         """
         super().__init__(data, fs, unit, name)
-    
+
+        # def f_at_max(self,**kwrags): return self.t_at_max(**kwrags)
+        self.f_at_max = self.t_at_max
+        self.f_at_min = self.t_at_min
+        self.val_at_nearest_f = self.val_at_nearest_t
+        self.f_range = self.duration
+
+    def copy(self): pass
+
     def plot(self, new_unit: tuple[str, float] = None, add_to_title='', new_figure=True, **kwargs):
         super().plot(new_unit, add_to_title, new_figure, **kwargs)
         plt.xlabel("Frequency (Hz)")
@@ -438,6 +380,109 @@ class FFT_signal(T_Signal):
 
 
 
+class FFT_full_sig :
+    """
+    Methods
+    -------
+        
+    Who give a float :
+    - Modulus functions
+        - `modul_at_nearest_f`
+        - `modul_max`
+        - `modul_min`
+        - `modul_f_at_max`
+        - `modul_f_at_min`
+        - `modul_f_at` 
+    
+    - Phases functions
+        - `phase_at_nearest_f`
+        - `phase_max`
+        - `phase_min`
+        - `phase_f_at_max`
+        - `phase_f_at_min`
+        - `phase_f_at`
+    - ``
+
+    Who return an Array :
+    - `modul_f_at`
+    - `phase_f_at`
+    
+
+    Who plot something :
+    - `plot`
+    - `plot_modul`
+    - `plot_phase`
+    - On plot
+        - `plot_ADD_freqs`
+        - `plot_ADD_box_on_recut`
+
+    - On plot_modul
+        - `plot_ADDmodul_box_on_recut`
+        - `plot_ADDmodul_freqs`
+        - `plot_ADDmodul_moduls`
+    - On plot_phase
+        - `plot_ADDphase_box_on_recut`
+        - `plot_ADDphase_freqs`
+        - `plot_ADDphase_phases`
+
+    Who return a T_signal :
+    - `ifft`
+    - ``
+    """
+
+    def __init__(self,  data: np.ndarray | list = None, 
+                        fs: float = 1, 
+                        unit: str = '', 
+                        name: str = ''):
+        """
+        Args :
+        ------
+        `data` : Array or list of complexes values
+        `fs` : Sampling frequency (Hz)  
+        `unit` : unit of the signal
+        `name` : name of the signal
+        """
+        if data is None : self.data = None
+        elif type(data)==np.ndarray : self.data = data 
+        elif type(data)==list : self.data = np.array(data)
+        else : warn("Wrong data type")
+
+        self.fs = fs
+        self.unit = unit
+        self.name = name
+
+    def plot(self): pass
+    def plot_ADD_freqs(self):pass
+    def plot_ADD_box_on_recut(self):pass
+
+    def plot_modul(self): pass
+    def plot_ADDmodul_box_on_recut(self):pass
+    def plot_ADDmodul_freqs(self):pass
+    def plot_ADDmodul_moduls(self):pass
+    
+    def plot_phase(self): pass
+    def plot_ADDphase_box_on_recut(self):pass
+    def plot_ADDphase_freqs(self):pass
+    def plot_ADDphase_phases(self):pass
+
+    def modul_at_nearest_f(self,f):pass
+    def modul_max(self):pass
+    def modul_min(self):pass
+    def modul_f_at_max(self):pass
+    def modul_f_at_min(self):pass
+    def modul_f_at(self):pass
+    
+    def phase_at_nearest_f(self,f):pass
+    def phase_max(self):pass
+    def phase_min(self):pass
+    def phase_f_at_max(self):pass
+    def phase_f_at_min(self):pass
+    def phase_f_at(self):pass
+    
+    def f_range(self):pass
+    def ifft(self): pass
+    def copy(self): pass
+    def empty_copy(self): pass
 
 
 
@@ -563,3 +608,41 @@ def bar_graph(l_y,l_label,l_ticks,l_color=None,close=True):
 
 
 
+
+class Filter :    
+    def FIR(            signal : T_Signal | list[T_Signal],
+                        order : int,
+                        cutoff : float | list[float],
+                        window : str = 'hamming',
+                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> T_Signal | list[T_Signal]:
+        if order == 0:
+            return signal
+
+        if type(signal) == T_Signal : 
+            if type_filtre == 'low_pass':
+                pass_zero = True 
+            elif type_filtre == 'high_pass':
+                pass_zero = False
+
+
+            num_coef = firwin(
+                numtaps = order+1,
+                cutoff = cutoff,
+                window = window,
+                pass_zero = pass_zero,
+                fs = signal.fs)
+            y = filtfilt(num_coef, 1, signal.data)
+            signal_f = T_Signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
+            return signal_f
+        
+        res = []
+        for sig in signal :
+            sig_f = Filter.FIR(
+                signal = sig,
+                order = order,
+                cutoff = cutoff,
+                window = window,
+                type_filtre = type_filtre)
+
+            res.append(sig_f)
+        return res
