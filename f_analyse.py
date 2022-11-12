@@ -139,8 +139,8 @@ class T_Signal :
         if print_choices :
             print(f"FFT : n={n}, len(data)={len(self.data)}")
 
-        # FFT avec 0 padding sur N
         plt.figure()
+        # FFT avec 0 padding sur n
         yf = np.fft.fft(self.data,n)
         xf = np.linspace(0,self.fs/2,n//2-1)
         # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
@@ -418,9 +418,22 @@ class F_signal(T_Signal):
 
 
 
+class FFT_modul(F_signal):
+    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
+        super().__init__(data, fs, unit, name, f0)
+
+    def plot_ADD_moduls(self, l_modul: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
+        return super().plot_ADD_values(l_modul, l_labels, l_colors, **kwargs)
 
 
 
+class FFT_phase(F_signal):
+    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
+        super().__init__(data, fs, unit, name, f0)
+
+
+    def plot_ADD_phases(self, l_phases: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
+        return super().plot_ADD_values(l_phases, l_labels, l_colors, **kwargs)
 
 
 
@@ -492,7 +505,8 @@ class FFT_signal :
     def __init__(self,  data: np.ndarray | list = None, 
                         fs: float = 1, 
                         unit: str = '', 
-                        name: str = ''):
+                        name: str = '',
+                        f0: float = 0):
         """
         Args :
         ------
@@ -500,6 +514,7 @@ class FFT_signal :
         `fs` : Sampling frequency (Hz)  
         `unit` : unit of the signal
         `name` : name of the signal
+        `f0` : beginning of the signal
         """
         if data is None : self.data = None
         elif type(data)==np.ndarray : self.data = data 
@@ -509,54 +524,112 @@ class FFT_signal :
         self.fs = fs
         self.unit = unit
         self.name = name
-        
-        # self.Modul = FFT_modul
-        # self.Phase = FFT_phase
+        self.f0 = f0
+
+        self.__compute_modul_phase_from_data()
+        self.__init_functions()
+    
+    def __compute_modul_phase_from_data(self):
+            
+        # FFT avec 0 padding sur n
+        # yf = np.fft.fft(self.data,n)
+        # xf = np.linspace(0,self.fs/2,n//2-1)
+        # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
+
+
+        n = len(self.data)          #deb Does it works ?  
+        yf_modul = 2/np.size(self.data)*np.abs(self.data[0:n//2-1])
+        # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
+        # division par la taille de max_spectro pour prendre en compte le pas 
+        yf_phase = np.angle(self.data[n])
+
+        self.Modul = FFT_modul( data = yf_modul,
+                                fs = self.fs,
+                                unit = '?',
+                                name = self.name + ' (FFT_modul)',
+                                f0 = self.f0)
+
+        self.Phase = FFT_phase( data = yf_phase,
+                                fs = self.fs,
+                                unit = '?',
+                                name = self.name + ' (FFT_phase)',
+                                f0 = self.f0)
+
+
+
+
+    def __init_functions(self):
+        self.plot_modul = self.Modul.plot
+        self.plot_ADDmodul_box_on_recut = self.Modul.plot_ADD_box_on_recut
+        self.plot_ADDmodul_freqs = self.Modul.plot_ADD_freqs
+        self.plot_ADDmodul_moduls = self.Modul.plot_ADD_moduls
+
+        self.plot_phase = self.Phase.plot
+        self.plot_ADDphase_box_on_recut = self.Phase.plot_ADD_box_on_recut
+        self.plot_ADDphase_freqs = self.Phase.plot_ADD_freqs
+        self.plot_ADDphase_phases = self.Phase.plot_ADD_phases
+            
+        self.modul_at_nearest_f = self.Modul.val_at_nearest_f
+        self.modul_max = self.Modul.max
+        self.modul_min = self.Modul.min
+        self.modul_f_at_max = self.Modul.f_at_max
+        self.modul_f_at_min = self.Modul.f_at_min
+        # self.modul_f_at = self.Modul.f_at   # TODO To define modul_f_at
+
+        self.phase_at_nearest_f = self.Phase.val_at_nearest_f
+        self.phase_max = self.Phase.max
+        self.phase_min = self.Phase.min
+        self.phase_f_at_max = self.Phase.f_at_max
+        self.phase_f_at_min = self.Phase.f_at_min
+        # self.phase_f_at = self.Phase.f_at   # TODO To define phase_f_at
+
+
+    def f_range(self)-> float : return len(self.data)/self.fs
+
+
 
     def plot(self): pass
     def plot_ADD_freqs(self):pass
     def plot_ADD_box_on_recut(self):pass
 
-    def plot_modul(self): pass
-    def plot_ADDmodul_box_on_recut(self):pass
-    def plot_ADDmodul_freqs(self):pass
-    def plot_ADDmodul_moduls(self):pass
+        # def plot_modul(self): return
+        # def plot_ADDmodul_box_on_recut(self):pass
+        # def plot_ADDmodul_freqs(self):pass
+        # def plot_ADDmodul_moduls(self):pass
     
-    def plot_phase(self): pass
-    def plot_ADDphase_box_on_recut(self):pass
-    def plot_ADDphase_freqs(self):pass
-    def plot_ADDphase_phases(self):pass
+        # def plot_phase(self): pass
+        # def plot_ADDphase_box_on_recut(self):pass
+        # def plot_ADDphase_freqs(self):pass
+        # def plot_ADDphase_phases(self):pass
 
-    def modul_at_nearest_f(self,f):pass
-    def modul_max(self):pass
-    def modul_min(self):pass
-    def modul_f_at_max(self):pass
-    def modul_f_at_min(self):pass
-    def modul_f_at(self):pass
+        # def modul_at_nearest_f(self,f):pass
+        # def modul_max(self):pass
+        # def modul_min(self):pass
+        # def modul_f_at_max(self):pass
+        # def modul_f_at_min(self):pass
+        # def modul_f_at(self):pass
     
-    def phase_at_nearest_f(self,f):pass
-    def phase_max(self):pass
-    def phase_min(self):pass
-    def phase_f_at_max(self):pass
-    def phase_f_at_min(self):pass
-    def phase_f_at(self):pass
+        # def phase_at_nearest_f(self,f):pass
+        # def phase_max(self):pass
+        # def phase_min(self):pass
+        # def phase_f_at_max(self):pass
+        # def phase_f_at_min(self):pass
+        # def phase_f_at(self):pass
     
-    def f_range(self):pass
-    def ifft(self): pass
-    def copy(self): pass
-    def empty_copy(self): pass
+    def ifft(self): pass # TODO implement ifft
+    def copy(self):
+        return FFT_signal(  data = self.data.copy(),
+                            fs = self.fs,
+                            unit = self.unit,
+                            name = self.name,
+                            f0 = self.f0)
 
-
-
-
-
-
-
-
-
-
-
-
+    def empty_copy(self): 
+        return FFT_signal(  data = None,
+                            fs = self.fs,
+                            unit = self.unit,
+                            name = self.name,
+                            f0 = self.f0)
 
 
 
