@@ -88,7 +88,12 @@ class T_Signal :
     def t_at_max(self)-> float : return np.argmax(self.data) / self.fs
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
     def duration(self)-> float : return len(self.data)/self.fs
+    def ft_max(self)-> float : return self.t0 + self.duration()
+    def ft_min(self)-> float : return self.t0
+
+    @property
     def t_max(self)-> float : return self.t0 + self.duration()
+    @property
     def t_min(self)-> float : return self.t0
 
 
@@ -173,30 +178,30 @@ class T_Signal :
 
 
     def plot_ADD_mean(self,**kwargs):
-        X = [self.t_max(), self.t_min()]
+        X = [self.ft_max(), self.ft_min()]
         Y = [self.mean()]*2
         plt.plot(X,Y,'--')
 
-    def plot_ADD_times(self, times:list|np.ndarray, **kwargs):
+    def plot_ADD_times(self, l_times:list|np.ndarray, **kwargs):
         yh = self.max()
         yl = self.min()
         e = yh-yl
         yh += e * 0.1 # to set the upper margin
         yl -= e * 0.1 # to set the lower margin
         
-        for time in times :
+        for time in l_times :
             X = [time]*2
             Y = [yl,yh]
-            plt.plot(X,Y,'--',label=f"t={times}s",**kwargs)
+            plt.plot(X,Y,'--',label=f"t={l_times}s",**kwargs)
 
     def plot_ADD_values(self,   l_values:list[float],
                                 l_labels:list[str]=None,
                                 l_colors:list[str]=None,
                                 **kwargs):
-        X = [self.t_max(), self.t_min()]
+        X = [self.ft_max(), self.ft_min()]
         if l_labels is None : l_labels = [None]*len(l_values)
         if l_colors is None : l_colors = [None]*len(l_values)
-        
+
         for value,label,color in zip(l_values,l_labels,l_colors):
             Y = [value]*2
             plt.plot(X,Y,'--',label=label,color=color,**kwargs)
@@ -222,7 +227,10 @@ class T_Signal :
         `t2` : float (optional)
             End of the recuted signal, use None to keep the signal until the end
         """
-        if t2 is None : t2 = self.duration()
+        if t1 < self.t_min : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min
+        if self.t_max < t2 : print("Warning : t_max < t2 , we used t1 = t_max istead"); t2 = self.t_max
+
+        if t2 is None : t2 = self.t_max
         i1,i2 = self.index_at(t1), self.index_at(t2)
         rep = self.empty_copy()
         rep.data = self.data[i1:i2]
@@ -230,17 +238,19 @@ class T_Signal :
         return rep
 
     def empty_copy(self):
-        """Copy everything exept data"""
+        """Copy everything exept data (including t0)"""
         return T_Signal(data = None,
                         fs = self.fs,
                         unit = self.unit,
-                        name = self.name)
+                        name = self.name,
+                        t0 = self.t_min)
 
     def copy(self):
         return T_Signal(data = self.data.copy(),
                         fs = self.fs,
                         unit = self.unit,
-                        name = self.name)
+                        name = self.name,
+                        t0 = self.t_min)
 
     def plot(   self,
                 new_unit : tuple[str,float] = None,
@@ -259,7 +269,7 @@ class T_Signal :
 
         plt.grid(True)
         N = len(data)
-        X=np.linspace(start=0 , stop=N/self.fs, num=N)
+        X=np.linspace(start=self.ft_min() , stop=self.ft_max(), num=N)
 
         plt.plot(X, data,label = f"{self.name}",**kwargs)
         plt.xlabel("time (s)")
@@ -345,15 +355,16 @@ class F_signal(T_Signal):
     Who plot something :
     o- `plot()`
     o- `plot_ADD_box_on_recut`
-    - `plot_ADD_freqs`
-    - `plot_ADD_values`
+    o- `plot_ADD_freqs`
+    o- `plot_ADD_values`
     - ``
 
     Who return a T_signal :
-    - `recut()`
-    - `copy()`
+    o- `recut()`
+    o- `copy()`
+    o- `empty_copy()`
     """
-    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = ''):
+    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '',f0 = 0):
         """
         Args :
         ------
@@ -362,25 +373,73 @@ class F_signal(T_Signal):
         `unit` : unit of the signal
         `name` : name of the signal
         """
-        super().__init__(data, fs, unit, name)
+        super().__init__(data, fs, unit, name, f0)
 
         # def f_at_max(self,**kwrags): return self.t_at_max(**kwrags)
         self.f_at_max = self.t_at_max
         self.f_at_min = self.t_at_min
         self.val_at_nearest_f = self.val_at_nearest_t
         self.f_range = self.duration
+    
+    @property
+    def f_min(self)->float: return self.t_min
+    @property
+    def f_max(self)->float: return self.t_max
 
-    def copy(self): pass
+
+    def empty_copy(self):
+        """Copy everything exept data (including f0)"""
+        return F_signal(data = None,
+                        fs = self.fs,
+                        unit = self.unit,
+                        name = self.name,
+                        f0 = self.f_min)
+
+
+
+    def copy(self):
+        return F_signal(data = self.data.copy(),
+                        fs = self.fs,
+                        unit = self.unit,
+                        name = self.name,
+                        f0 = self.f_min)
+
 
     def plot(self, new_unit: tuple[str, float] = None, add_to_title='', new_figure=True, **kwargs):
         super().plot(new_unit, add_to_title, new_figure, **kwargs)
         plt.xlabel("Frequency (Hz)")
         
+    def plot_ADD_freqs(self, l_freq: list | np.ndarray, **kwargs):
+        return super().plot_ADD_times(l_freq, **kwargs)
 
 
 
 
-class FFT_full_sig :
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class FFT_signal :
     """
     Methods
     -------
@@ -450,6 +509,9 @@ class FFT_full_sig :
         self.fs = fs
         self.unit = unit
         self.name = name
+        
+        # self.Modul = FFT_modul
+        # self.Phase = FFT_phase
 
     def plot(self): pass
     def plot_ADD_freqs(self):pass
