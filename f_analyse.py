@@ -1,3 +1,20 @@
+
+
+# To import this file :
+# --------------------------
+
+
+# import sys
+
+# my_path = r"C:\Users\alomb\OneDrive\new_racine\Documents\_Pro\CODE\Data_analysis"
+# if my_path not in sys.path : sys.path.append(my_path); print("path added")
+
+# from f_analyse import * 
+
+
+
+
+
 from warnings import warn
 from typing import Literal
 import pandas as pd
@@ -72,7 +89,11 @@ class C_signal :
 
 
     # def plot() : pass
-    def plot_fft(self,n: int=None,n_factor: float=None):
+    def plot_fft(self,  n: int=None,
+                        n_factor: float=None,
+                        choose_next_power_of_2 = True,
+                        print_choices = False,
+                        **kwargs):
         """
         Args 
         -----
@@ -80,6 +101,8 @@ class C_signal :
             Size of the signal after zero padding. It's need `n`>= len(data)
         `n_factor` : float (optional)
             If not None, `n`=len(data)*`n_factor`
+        `choose_next_power_of_2` : bool
+            If true use the newxt power of 2 istead of `n`
         """
         if n is None : n = len(self.data)
         if n_factor is not None : n= len(self.data) * n_factor
@@ -87,6 +110,12 @@ class C_signal :
         if n < len(self.data):
             print("n is smaller than self.data, we use n=len(self.data) instead")
             n=len(self.data)
+
+        if choose_next_power_of_2 :
+            n = int(2**np.ceil(np.log(n) / np.log(2)))
+            
+        if print_choices :
+            print(f"FFT : n={n}, len(data)={len(self.data)}")
 
         # FFT avec 0 padding sur N
         plt.figure()
@@ -166,79 +195,9 @@ class C_signal :
 
 
 
-    # def mean_on_recut(  self,
-    #                     t_start=0,
-    #                     t_end=None,
-    #                     plot=False,
-    #                     close=True,
-    #                     plot_recut=False):
-
-    #     if t_end is None : t_end = self.give_duration()
-    #     if t_end < 0 : t_end += self.give_duration()
-    #     sig_recut = self.re_cut(t_start,t_end)
-    #     mean = np.mean(sig_recut.data)
-
-    #     if plot and not plot_recut :
-    #         self.plot(close=close)
-    #         plt.plot([t_start,t_end],[mean]*2,'--r',label=f"{self.name} moyen (={mean:.2f} {self.unit})")
-    #         plt.legend()
-
-    #     if plot and plot_recut : 
-    #         sig_recut.plot(close=close)
-    #         plt.plot([0,t_end - t_start],[mean]*2,'--r',label=f"{self.name} moyen (={mean:.2f} {self.unit})")
-    #         plt.legend()
-    #     return mean
 
 
 
-    # def derivate(self,order=1):
-    #     if order == 0 : return self.copy()
-    #     if order != 1 :
-    #         rep_0 = self.derivate(order = order-1)
-    #         return rep_0.derivate()
-    #     data_n = self.data.copy()
-    #     data_n_1 = np.roll(self.data, 1)
-    #     data_d = (data_n - data_n_1) * self.fs
-    #     rep = self.copy()
-    #     rep.name += " derivated"
-    #     rep.data = data_d[1:]
-    #     return rep
-
-
-    def re_cut( self,
-                t1:float|None = None,
-                t2:float|None = None    ):
-        """
-        Cette fonction rend un copie recoupée du signal
-
-        args
-        ----
-        `t1` = temps de début (en s)  
-
-        `t2` = temps de fin (en s)
-
-        return
-        ------
-        `signal_recut` = a copy of the original signal but recuted
-        """
-        rep = self.copy()
-        rep.name += " re_cut"
-        
-        if t1 is None: t1=0
-        
-        if t2 is None: rep.data = rep.data[ int(t1*self.fs) : ]
-        else : rep.data = rep.data[ int(t1*self.fs) : int(t2*self.fs) ]
-        
-        return rep 
-
-
-    # def plot(self,      color=None,
-    #                     close=True,
-    #                     draw_points=False,
-    #                     axis_label=True,
-    #                     linewidth=None,
-    #                     add_to_title='',
-    #                     new_unit : tuple[str,float] = None):
 
 
     def plot(   self,
@@ -265,62 +224,62 @@ class C_signal :
         plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name}"+add_to_title)
 
-    # def plot_FFT(self,      color=None,
-    #                         label=None,
-    #                         add_50Hz=False,
-    #                         add_freqs : list[float]|None = None,
-    #                         new_figure = True,
-    #                         with_0_Hz = False,
-    #                         add_3dB = False):
-    #     '''
-    #     Args 
-    #     ------
-    #     `color` = The color used to draw the signal
+    def plot_FFT(self,      color=None,
+                            label=None,
+                            add_50Hz=False,
+                            add_freqs : list[float]|None = None,
+                            new_figure = True,
+                            with_0_Hz = False,
+                            add_3dB = False):
+        '''
+        Args 
+        ------
+        `color` = The color used to draw the signal
 
-    #     `label` = Not used for the moment
+        `label` = Not used for the moment
 
-    #     `add_50Hz` = Draw 50 Hz and harmonics 
+        `add_50Hz` = Draw 50 Hz and harmonics 
         
-    #     `add_freqs` = Liste de fréquence à ajouter au graphique
+        `add_freqs` = Liste de fréquence à ajouter au graphique
         
-    #     `new_figure` = Crée une nouvelle figure avant l'affichage
+        `new_figure` = Crée une nouvelle figure avant l'affichage
         
-    #     `with_0Hz` = if False, it subtract the mean of the signal to the signal itself, before doing the FFT
-    #     '''
-    #     if new_figure : plt.figure()
-    #     if add_freqs is None : add_freqs = []
+        `with_0Hz` = if False, it subtract the mean of the signal to the signal itself, before doing the FFT
+        '''
+        if new_figure : plt.figure()
+        if add_freqs is None : add_freqs = []
         
-    #     self.data
-    #     self.fs
+        self.data
+        self.fs
 
-    #     Te = 1/self.fs                      # periode d'echantillonage
-    #     N = len(self.data)                  # Nombre de point de données
+        Te = 1/self.fs                      # periode d'echantillonage
+        N = len(self.data)                  # Nombre de point de données
 
-    #     if with_0_Hz : yf = fft(self.data)[:N//2]          # Pour ne garder que la moitié
-    #     else : yf = fft(self.data-self.data.mean())[:N//2]         
-    #     yf = abs(yf)                        # Passage au module
-    #     yf = yf/max(yf)                     # Normalisation
-    #     yf_db = 20*np.log10(yf)             # Convertion en dB
-    #     yf_db = [-100 if e==-np.inf else e for e in yf_db]
-    #     xf = fftfreq(N, Te)[:N//2]          # Génération de l'echelle des fréquences
+        if with_0_Hz : yf = fft(self.data)[:N//2]          # Pour ne garder que la moitié
+        else : yf = fft(self.data-self.data.mean())[:N//2]         
+        yf = abs(yf)                        # Passage au module
+        yf = yf/max(yf)                     # Normalisation
+        yf_db = 20*np.log10(yf)             # Convertion en dB
+        yf_db = [-100 if e==-np.inf else e for e in yf_db]
+        xf = fftfreq(N, Te)[:N//2]          # Génération de l'echelle des fréquences
 
-    #     if add_50Hz :
-    #         v_min = min(yf_db)
-    #         plt.plot([50,50,100,100,150,150,200,200],[v_min,-3,-3,v_min]*2,linestyle='-',color='orange',label='50Hz et harmoniques')
+        if add_50Hz :
+            v_min = min(yf_db)
+            plt.plot([50,50,100,100,150,150,200,200],[v_min,-3,-3,v_min]*2,linestyle='-',color='orange',label='50Hz et harmoniques')
 
-    #     min_db = np.min(yf_db)
-    #     for freq in add_freqs : 
-    #         print(f"min_db = {min_db}")
-    #         plt.plot([freq,freq],[min_db,0],'--',color='#f82',label=f"{freq} Hz")
-    #         plt.annotate(f" {freq} Hz",(freq,-70),color='#f82')
+        min_db = np.min(yf_db)
+        for freq in add_freqs : 
+            print(f"min_db = {min_db}")
+            plt.plot([freq,freq],[min_db,0],'--',color='#f82',label=f"{freq} Hz")
+            plt.annotate(f" {freq} Hz",(freq,-70),color='#f82')
 
-    #     plt.plot(xf,yf_db,label=f"FFT de {self.name}",color=color)
-    #     if add_3dB : plt.plot([0,self.fs/2],[-3,-3],'--r',label="-3 dB")
-    #     plt.grid()
-    #     plt.legend(loc="lower left")
-    #     plt.title(f"FFT du signal {self.name}")
-    #     plt.ylabel('Amplitude normalisé (dB)')
-    #     plt.xlabel('fréquence (Hz)')
+        plt.plot(xf,yf_db,label=f"FFT de {self.name}",color=color)
+        if add_3dB : plt.plot([0,self.fs/2],[-3,-3],'--r',label="-3 dB")
+        plt.grid()
+        plt.legend(loc="lower left")
+        plt.title(f"FFT du signal {self.name}")
+        plt.ylabel('Amplitude normalisé (dB)')
+        plt.xlabel('fréquence (Hz)')
 
 
     # def study_domain(self,start,end):
