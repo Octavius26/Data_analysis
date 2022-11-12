@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 
 
 
-class C_signal :
+class T_Signal :
     """
     Methods
     -------
@@ -48,11 +48,11 @@ class C_signal :
     Who add something on a plot :
     - `plot_ADD_box_on_recut`
 
-    Who return a signal :
+    Who return a T_signal :
     - `recut()`
     - `copy()`
     """
-
+    
 
     def __init__(           self,
                             data : np.ndarray | list = None,
@@ -93,6 +93,7 @@ class C_signal :
                         n_factor: float=None,
                         choose_next_power_of_2 = True,
                         print_choices = False,
+                        dB_mode = False,
                         **kwargs):
         """
         Args 
@@ -103,6 +104,15 @@ class C_signal :
             If not None, `n`=len(data)*`n_factor`
         `choose_next_power_of_2` : bool
             If true use the newxt power of 2 istead of `n`
+        `print_choices` : bool
+        `dB_mode` : bool
+            Impact the output signal
+
+        Return
+        ------
+        `xf` : Array
+        `yf_real` : Array
+            It is impacted by `dB_mode`
         """
         if n is None : n = len(self.data)
         if n_factor is not None : n= len(self.data) * n_factor
@@ -113,7 +123,7 @@ class C_signal :
 
         if choose_next_power_of_2 :
             n = int(2**np.ceil(np.log(n) / np.log(2)))
-            
+
         if print_choices :
             print(f"FFT : n={n}, len(data)={len(self.data)}")
 
@@ -123,10 +133,27 @@ class C_signal :
         xf = np.linspace(0,self.fs/2,n//2-1)
         # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
         yf_real = 2/np.size(self.data)*np.abs(yf[0:n//2-1])
+        if dB_mode : yf_real = 20*np.log10(yf_real)
         # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
         # division par la taille de max_spectro pour prendre en compte le pas 
         plt.plot(xf,yf_real)
+        plt.title(self.name + " FFT")
+        if dB_mode : 
+            plt.ylabel("Amplitude(dB)")
+            plt.xlabel("frequency(Hz)")
 
+        # TODO make C_signal compatible with fft signal ?
+        # fft_sig = self.empty_copy()
+        # fft_sig.name += ' fft'
+        # fft_sig.data = yf_real
+        # fft_sig.fs = 1/(xf[1]-xf[0])
+        # fft_sig.unit = 'dB' if dB_mode else 'FFT_unit'
+
+        return xf, yf_real
+
+
+
+    def plot_fft_phase(): pass # TODO plot_fft_phase
 
     def plot_ADD_box_on_recut(self,t1: float,t2: float,**kwargs) : 
         yh = self.recut(t1,t2).max()
@@ -151,7 +178,6 @@ class C_signal :
         """
         return int(t*self.fs)
 
-
     def recut(self,t1: float=0,t2: float=None) :
         """
         Args
@@ -170,13 +196,13 @@ class C_signal :
 
     def empty_copy(self):
         """Copy everything exept data"""
-        return C_signal(data = None,
+        return T_Signal(data = None,
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name)
 
     def copy(self):
-        return C_signal(data = self.data.copy(),
+        return T_Signal(data = self.data.copy(),
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name)
@@ -221,7 +247,8 @@ class C_signal :
 
         plt.plot(X, data,label = f"{self.name}",**kwargs)
         plt.xlabel("time (s)")
-        plt.ylabel(f"Amplitude ({unit})")
+        if unit is None : plt.ylabel('Amplitude')
+        else : plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name}"+add_to_title)
 
     def plot_FFT(self,      color=None,
@@ -302,16 +329,39 @@ class C_signal :
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Filter :    
-    def FIR(            signal : C_signal | list[C_signal],
+    def FIR(            signal : T_Signal | list[T_Signal],
                         order : int,
                         cutoff : float | list[float],
                         window : str = 'hamming',
-                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> C_signal | list[C_signal]:
+                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> T_Signal | list[T_Signal]:
         if order == 0:
             return signal
 
-        if type(signal) == C_signal : 
+        if type(signal) == T_Signal : 
             if type_filtre == 'low_pass':
                 pass_zero = True 
             elif type_filtre == 'high_pass':
@@ -325,7 +375,7 @@ class Filter :
                 pass_zero = pass_zero,
                 fs = signal.fs)
             y = filtfilt(num_coef, 1, signal.data)
-            signal_f = C_signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
+            signal_f = T_Signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
             return signal_f
         
         res = []
@@ -339,6 +389,108 @@ class Filter :
 
             res.append(sig_f)
         return res
+
+
+
+
+class FFT_signal(T_Signal):
+    """
+    Methods
+    -------
+        
+    Who give a float :
+    - `std()`
+    - `max()`
+    - `min()`
+    - `val_at_nearest_t(t:)`
+    - `t_at_max()` => `f_at_max()`
+    - `t_at_min()` => `f_at_min()`
+    - `duration()` => `f_range()`
+
+    Who plot something :
+    - `plot()`
+    - `plot_fft()` => UNAVAIBLE
+    - `plot_study_domain()`
+
+    Who add something on a plot :
+    - `plot_ADD_box_on_recut`
+
+    Who return a T_signal :
+    - `recut()`
+    - `copy()`
+    """
+    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = ''):
+        """
+        Args :
+        ------
+        `data` : Array or list of values
+        `fs` : << Sampling frequency >> calculated by 1/(f1-f0)
+        `unit` : unit of the signal
+        `name` : name of the signal
+        """
+        super().__init__(data, fs, unit, name)
+    
+    def plot(self, new_unit: tuple[str, float] = None, add_to_title='', new_figure=True, **kwargs):
+        super().plot(new_unit, add_to_title, new_figure, **kwargs)
+        plt.xlabel("Frequency (Hz)")
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -360,7 +512,7 @@ class f_sig :
         f_sig.init_ok = True
 
 
-    def f_current(sig_V : C_signal,num : int):
+    def f_current(sig_V : T_Signal,num : int):
         '''
         Cette fonction convertie la tension lue par l'ADC en courant traversant le fil
 
@@ -376,7 +528,7 @@ class f_sig :
         if sig_V.unit not in ['V','v','Volts','volts'] : 
             print("Attention l'unité de sig_V.unit est peut-être fausse") 
 
-        sig_I = C_signal(data=None, fs=sig_V.fs, unit='A', name=f"U_I{num} converted to I{num}")
+        sig_I = T_Signal(data=None, fs=sig_V.fs, unit='A', name=f"U_I{num} converted to I{num}")
         match num :
             case 1 :
                 sig_I.data = f_sig.f_I1(sig_V.data)
