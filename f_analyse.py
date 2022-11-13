@@ -149,7 +149,9 @@ class T_Signal :
                             fs = 1/(xf[1]-xf[0]),
                             unit = '',
                             name = f"{self.name} FFT",
-                            f0 = 0)
+                            f0 = 0,
+                            nb_zero = n - len(self.data),
+                            window = None)
 
     def plot_ADD_box_on_recut(self,t1: float,t2: float,**kwargs) : 
         yh = self.recut(t1,t2).max()
