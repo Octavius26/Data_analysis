@@ -460,7 +460,9 @@ class FFT_signal :
                         fs: float = 1, 
                         unit: str = '', 
                         name: str = '',
-                        f0: float = 0):
+                        f0: float = 0,
+                        nb_zero: int = 0,
+                        window: np.ndarray | list = None ):
         """
         Args :
         ------
@@ -469,6 +471,8 @@ class FFT_signal :
         `unit` : unit of the signal
         `name` : name of the signal
         `f0` : beginning of the signal
+        `nb_zero` : the number of zeros added for 0 padding
+        `window` : the appodization window used #TODO exploiter la fenêtre d'appodisation 
         """
         if data is None : self.data = None
         elif type(data)==np.ndarray : self.data = data 
@@ -479,6 +483,8 @@ class FFT_signal :
         self.unit = unit
         self.name = name
         self.f0 = f0
+        self.nb_zero = nb_zero
+        self.window = window
 
         self.__compute_modul_phase_from_data()
         self.__init_functions()
@@ -492,7 +498,7 @@ class FFT_signal :
 
         N = len(self.data)
         n =  (len(self.data)-1)*2 if N%2 != 0 else len(self.data)*2-1
-        yf_modul = 2/n*np.abs(self.data)
+        yf_modul = 2/(n-self.nb_zero) * np.abs(self.data)
         # yf_modul = 2/np.size(self.data)*np.abs(self.data[0:n//2-1])
         # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
         # division par la taille de max_spectro pour prendre en compte le pas 
