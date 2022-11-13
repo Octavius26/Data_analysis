@@ -340,20 +340,29 @@ class F_signal(T_Signal):
         super().plot(new_unit, add_to_title, new_figure, **kwargs)
         plt.xlabel("Frequency (Hz)")
         
-    def plot_ADD_freqs(self, l_freq: list | np.ndarray, **kwargs):
-        return super().plot_ADD_times(l_freq, **kwargs)
+    def plot_ADD_freqs(self, l_freqs: list | np.ndarray, **kwargs):
+        yh = self.max()
+        yl = self.min()
+        e = yh-yl
+        yh += e * 0.1 # to set the upper margin
+        yl -= e * 0.1 # to set the lower margin
+        
+        for time in l_freqs :
+            X = [time]*2
+            Y = [yl,yh]
+            plt.plot(X,Y,'--',label=f"f={time} Hz",**kwargs)
 
-    def plot_ADD_f_at_max(self,**kwargs):
-        return super().plot_ADD_t_at_max(**kwargs)
+    # def plot_ADD_f_at_max(self,**kwargs):
+    #     return super().plot_ADD_t_at_max(**kwargs)
 
-    def plot_ADD_f_at_min(self,**kwargs):
-        return super().plot_ADD_t_at_min(**kwargs)
+    # def plot_ADD_f_at_min(self,**kwargs):
+    #     return super().plot_ADD_t_at_min(**kwargs)
 
 
     def plot_ADD_f_at_max(self,**kwargs): 
         self.plot_ADD_freqs([self.f_at_max()],**kwargs)
         
-    def plot_ADD_f_at_max(self,**kwargs): 
+    def plot_ADD_f_at_min(self,**kwargs): 
         self.plot_ADD_freqs([self.f_at_min()],**kwargs)
 
 
