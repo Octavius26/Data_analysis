@@ -165,7 +165,7 @@ class T_Signal :
     def plot_ADD_mean(self,**kwargs):
         X = [self.ft_max(), self.ft_min()]
         Y = [self.mean()]*2
-        plt.plot(X,Y,'--')
+        plt.plot(X,Y,'--',label=f"mean = {self.mean()}")
 
     def plot_ADD_times(self, l_times:list|np.ndarray, **kwargs):
         yh = self.max()
