@@ -153,12 +153,12 @@ class T_Signal :
                             nb_zero = n - len(self.data),
                             window = None)
 
-    def plot_ADD_box_on_recut(self,t1: float,t2: float,**kwargs) : 
+    def plot_ADD_box_on_recut(self,t1: float,t2: float,extra_margin: float=0,**kwargs) : 
         yh = self.recut(t1,t2).max()
         yl = self.recut(t1,t2).min()
         e = yh-yl
-        yh += e * 0.1 # to set the upper margin
-        yl -= e * 0.1 # to set the lower margin
+        yh += e * 0.1 + extra_margin # to set the upper margin
+        yl -= e * 0.1 + extra_margin# to set the lower margin
         X = [t1,t2,t2,t1,t1]
         Y = [yh,yh,yl,yl,yh]
         plt.plot(X,Y,'--',**kwargs)
