@@ -100,7 +100,11 @@ class T_Signal :
     @property
     def t_min(self)-> float : return self.t0
 
-
+    def plot_ADD_max_t(self,**kwargs): 
+        self.plot_ADD_times([self.t_at_max()],**kwargs)
+        
+    def plot_ADD_min_t(self,**kwargs): 
+        self.plot_ADD_times([self.t_at_min()],**kwargs)
 
     def fft(self,   n: int=None, 
                     n_factor: float=None,
@@ -147,10 +151,6 @@ class T_Signal :
                             name = f"{self.name} FFT",
                             f0 = 0)
 
-
-
-
-
     def plot_ADD_box_on_recut(self,t1: float,t2: float,**kwargs) : 
         yh = self.recut(t1,t2).max()
         yl = self.recut(t1,t2).min()
@@ -160,7 +160,6 @@ class T_Signal :
         X = [t1,t2,t2,t1,t1]
         Y = [yh,yh,yl,yl,yh]
         plt.plot(X,Y,'--',**kwargs)
-
 
     def plot_ADD_mean(self,**kwargs):
         X = [self.ft_max(), self.ft_min()]
@@ -190,9 +189,6 @@ class T_Signal :
         for value,label,color in zip(l_values,l_labels,l_colors):
             Y = [value]*2
             plt.plot(X,Y,'--',label=label,color=color,**kwargs)
-
-
-
 
     def index_at(self,t: float):
         """
@@ -261,62 +257,18 @@ class T_Signal :
         else : plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name}"+add_to_title)
 
-    # def plot_FFT_depreceated(self,      color=None, 
-    #                         label=None,
-    #                         add_50Hz=False,
-    #                         add_freqs : list[float]|None = None,
-    #                         new_figure = True,
-    #                         with_0_Hz = False,
-    #                         add_3dB = False):
-    #     '''
-    #     Args 
-    #     ------
-    #     `color` = The color used to draw the signal
 
-    #     `label` = Not used for the moment
 
-    #     `add_50Hz` = Draw 50 Hz and harmonics 
-        
-    #     `add_freqs` = Liste de fréquence à ajouter au graphique
-        
-    #     `new_figure` = Crée une nouvelle figure avant l'affichage
-        
-    #     `with_0Hz` = if False, it subtract the mean of the signal to the signal itself, before doing the FFT
-    #     '''
-    #     if new_figure : plt.figure()
-    #     if add_freqs is None : add_freqs = []
-        
-    #     self.data
-    #     self.fs
 
-    #     Te = 1/self.fs                      # periode d'echantillonage
-    #     N = len(self.data)                  # Nombre de point de données
 
-    #     if with_0_Hz : yf = fft(self.data)[:N//2]          # Pour ne garder que la moitié
-    #     else : yf = fft(self.data-self.data.mean())[:N//2]         
-    #     yf = abs(yf)                        # Passage au module
-    #     yf = yf/max(yf)                     # Normalisation
-    #     yf_db = 20*np.log10(yf)             # Convertion en dB
-    #     yf_db = [-100 if e==-np.inf else e for e in yf_db]
-    #     xf = fftfreq(N, Te)[:N//2]          # Génération de l'echelle des fréquences
 
-    #     if add_50Hz :
-    #         v_min = min(yf_db)
-    #         plt.plot([50,50,100,100,150,150,200,200],[v_min,-3,-3,v_min]*2,linestyle='-',color='orange',label='50Hz et harmoniques')
 
-    #     min_db = np.min(yf_db)
-    #     for freq in add_freqs : 
-    #         print(f"min_db = {min_db}")
-    #         plt.plot([freq,freq],[min_db,0],'--',color='#f82',label=f"{freq} Hz")
-    #         plt.annotate(f" {freq} Hz",(freq,-70),color='#f82')
 
-    #     plt.plot(xf,yf_db,label=f"FFT de {self.name}",color=color)
-    #     if add_3dB : plt.plot([0,self.fs/2],[-3,-3],'--r',label="-3 dB")
-    #     plt.grid()
-    #     plt.legend(loc="lower left")
-    #     plt.title(f"FFT du signal {self.name}")
-    #     plt.ylabel('Amplitude normalisé (dB)')
-    #     plt.xlabel('fréquence (Hz)')
+
+
+
+
+
 
 
 
@@ -369,7 +321,6 @@ class F_signal(T_Signal):
     @property
     def f_max(self)->float: return self.t_max
 
-
     def empty_copy(self):
         """Copy everything exept data (including f0)"""
         return F_signal(data = None,
@@ -378,15 +329,12 @@ class F_signal(T_Signal):
                         name = self.name,
                         f0 = self.f_min)
 
-
-
     def copy(self):
         return F_signal(data = self.data.copy(),
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name,
                         f0 = self.f_min)
-
 
     def plot(self, new_unit: tuple[str, float] = None, add_to_title='', new_figure=True, **kwargs):
         super().plot(new_unit, add_to_title, new_figure, **kwargs)
@@ -395,6 +343,11 @@ class F_signal(T_Signal):
     def plot_ADD_freqs(self, l_freq: list | np.ndarray, **kwargs):
         return super().plot_ADD_times(l_freq, **kwargs)
 
+    def plot_ADD_max_f(self,**kwargs):
+        return super().plot_ADD_max_t(**kwargs)
+
+    def plot_ADD_min_f(self,**kwargs):
+        return super().plot_ADD_min_t(**kwargs)
 
 
 
@@ -410,10 +363,12 @@ class FFT_modul(F_signal):
 
 
 
+
+
+
 class FFT_phase(F_signal):
     def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
         super().__init__(data, fs, unit, name, f0)
-
 
     def plot_ADD_phases(self, l_phases: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
         return super().plot_ADD_values(l_phases, l_labels, l_colors, **kwargs)
@@ -539,9 +494,6 @@ class FFT_signal :
                                 name = f"{self.name} (FFT_phase)",
                                 f0 = self.f0)
 
-
-
-
     def __init_functions(self):
         self.plot_modul = self.Modul.plot
         self.plot_ADDmodul_box_on_recut = self.Modul.plot_ADD_box_on_recut
@@ -567,7 +519,6 @@ class FFT_signal :
         self.phase_f_at_min = self.Phase.f_at_min
         # self.phase_f_at = self.Phase.f_at   # TODO To define phase_f_at
 
-
     def plot_ADDmodul_box_on_recut(self,f1:float,f2:float,**kwargs):
         """
         Args
@@ -579,8 +530,6 @@ class FFT_signal :
 
     def f_range(self)-> float : return len(self.data)/self.fs
 
-
-
     def plot(self,new_figure=True,figsize : tuple[int] =None,**kwargs):
         plt.figure(figsize=figsize)
         plt.subplot(211)
@@ -588,36 +537,8 @@ class FFT_signal :
         plt.subplot(212)
         self.Phase.plot(new_figure=False,**kwargs)
 
-
     def plot_ADD_freqs(self):pass
     def plot_ADD_box_on_recut(self):pass
-
-        # def plot_modul(self): return
-        # def plot_ADDmodul_box_on_recut(self):pass
-        # def plot_ADDmodul_freqs(self):pass
-        # def plot_ADDmodul_moduls(self):pass
-    
-        # def plot_phase(self): pass
-        # def plot_ADDphase_box_on_recut(self):pass
-        # def plot_ADDphase_freqs(self):pass
-        # def plot_ADDphase_phases(self):pass
-
-        # def modul_at_nearest_f(self,f):pass
-        # def modul_max(self):pass
-        # def modul_min(self):pass
-        # def modul_f_at_max(self):pass
-        # def modul_f_at_min(self):pass
-        # def modul_f_at(self):pass
-    
-        # def phase_at_nearest_f(self,f):pass
-        # def phase_max(self):pass
-        # def phase_min(self):pass
-        # def phase_f_at_max(self):pass
-        # def phase_f_at_min(self):pass
-        # def phase_f_at(self):pass
-    
-        
-
 
     def copy(self):
         return FFT_signal(  data = self.data.copy(),
