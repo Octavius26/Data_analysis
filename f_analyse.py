@@ -100,10 +100,10 @@ class T_Signal :
     @property
     def t_min(self)-> float : return self.t0
 
-    def plot_ADD_max_t(self,**kwargs): 
+    def plot_ADD_t_at_max(self,**kwargs): 
         self.plot_ADD_times([self.t_at_max()],**kwargs)
         
-    def plot_ADD_min_t(self,**kwargs): 
+    def plot_ADD_t_at_min(self,**kwargs): 
         self.plot_ADD_times([self.t_at_min()],**kwargs)
 
     def fft(self,   n: int=None, 
@@ -343,11 +343,18 @@ class F_signal(T_Signal):
     def plot_ADD_freqs(self, l_freq: list | np.ndarray, **kwargs):
         return super().plot_ADD_times(l_freq, **kwargs)
 
-    def plot_ADD_max_f(self,**kwargs):
-        return super().plot_ADD_max_t(**kwargs)
+    def plot_ADD_f_at_max(self,**kwargs):
+        return super().plot_ADD_t_at_max(**kwargs)
 
-    def plot_ADD_min_f(self,**kwargs):
-        return super().plot_ADD_min_t(**kwargs)
+    def plot_ADD_f_at_min(self,**kwargs):
+        return super().plot_ADD_t_at_min(**kwargs)
+
+
+    def plot_ADD_f_at_max(self,**kwargs): 
+        self.plot_ADD_freqs([self.f_at_max()],**kwargs)
+        
+    def plot_ADD_f_at_max(self,**kwargs): 
+        self.plot_ADD_freqs([self.f_at_min()],**kwargs)
 
 
 
@@ -499,11 +506,15 @@ class FFT_signal :
         self.plot_ADDmodul_box_on_recut = self.Modul.plot_ADD_box_on_recut
         self.plot_ADDmodul_freqs = self.Modul.plot_ADD_freqs
         self.plot_ADDmodul_moduls = self.Modul.plot_ADD_moduls
+        self.plot_ADDmodul_f_at_max = self.Modul.plot_ADD_f_at_max
+        self.plot_ADDmodul_f_at_min = self.Modul.plot_ADD_f_at_min
 
         self.plot_phase = self.Phase.plot
         self.plot_ADDphase_box_on_recut = self.Phase.plot_ADD_box_on_recut
         self.plot_ADDphase_freqs = self.Phase.plot_ADD_freqs
         self.plot_ADDphase_phases = self.Phase.plot_ADD_phases
+        self.plot_ADDphase_f_at_max = self.Phase.plot_ADD_f_at_max
+        self.plot_ADDphase_f_at_min = self.Phase.plot_ADD_f_at_min
             
         self.modul_at_nearest_f = self.Modul.val_at_nearest_f
         self.modul_max = self.Modul.max
@@ -519,14 +530,7 @@ class FFT_signal :
         self.phase_f_at_min = self.Phase.f_at_min
         # self.phase_f_at = self.Phase.f_at   # TODO To define phase_f_at
 
-    def plot_ADDmodul_box_on_recut(self,f1:float,f2:float,**kwargs):
-        """
-        Args
-        ----
-        `f1` : beginnig frequency
-        `f2` : ending frequency 
-        """
-        self.Modul.plot_ADD_box_on_recut(f1,f2,**kwargs)
+
 
     def f_range(self)-> float : return len(self.data)/self.fs
 
