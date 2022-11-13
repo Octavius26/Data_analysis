@@ -153,7 +153,9 @@ class T_Signal :
                             nb_zero = n - len(self.data),
                             window = None)
 
-    def plot_ADD_box_on_recut(self,t1: float,t2: float,extra_margin: float=0,**kwargs) : 
+    def plot_ADD_box_on_recut(self,t1: float=None,t2: float=None,extra_margin: float=0,**kwargs) : 
+        if t1 is None : t1 = self.t_min
+        if t2 is None : t2 = self.t_max
         yh = self.recut(t1,t2).max()
         yl = self.recut(t1,t2).min()
         e = yh-yl
@@ -280,26 +282,25 @@ class F_signal(T_Signal):
     -------
         
     Who give a float :
-    o- `std()`
-    o- `mean()`
-    o- `max()`
-    o- `min()`
-    o- `val_at_nearest_t` => `val_at_nearest_f`
-    o- `t_at_max` => `f_at_max`
-    o- `t_at_min` => `f_at_min`
-    o- `duration` => `f_range`
+    - `std()`
+    - `mean()`
+    - `max()`
+    - `min()`
+    - `val_at_nearest_t` => `val_at_nearest_f`
+    - `t_at_max` => `f_at_max`
+    - `t_at_min` => `f_at_min`
+    - `duration` => `f_range`
 
     Who plot something :
-    o- `plot()`
-    o- `plot_ADD_box_on_recut`
-    o- `plot_ADD_freqs`
-    o- `plot_ADD_values`
-    - ``
+    - `plot()`
+    - `plot_ADD_box_on_recut` #TODO redifne plot_ADD_box_on_recut
+    - `plot_ADD_freqs`
+    - `plot_ADD_values`
 
     Who return a T_signal :
-    o- `recut()`
-    o- `copy()`
-    o- `empty_copy()`
+    - `recut()`
+    - `copy()`
+    - `empty_copy()`
     """
     def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '',f0 = 0):
         """
