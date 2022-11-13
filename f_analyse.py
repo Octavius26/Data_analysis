@@ -106,7 +106,7 @@ class T_Signal :
     def plot_ADD_t_at_min(self,**kwargs): 
         self.plot_ADD_times([self.t_at_min()],**kwargs)
 
-    def fft(self,   n: int=None, 
+    def fft(self,   n: int=None,
                     n_factor: float=None,
                     choose_next_power_of_2 = True,
                     print_choices = False,
@@ -130,7 +130,7 @@ class T_Signal :
         # TODO use apodization windows (hamming,...)
 
         if n is None : n = len(self.data)
-        if n_factor is not None : n= len(self.data) * n_factor
+        if n_factor is not None : n = int(len(self.data) * n_factor)
 
         if n < len(self.data):
             print("n is smaller than self.data, we use n=len(self.data) instead")
