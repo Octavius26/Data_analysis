@@ -17,9 +17,12 @@
 
 from warnings import warn
 from typing import Literal
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+import scipy.fft as spf
+
+
 from scipy.fft import fft, fftfreq
 from scipy.signal import filtfilt,firwin
 from scipy.interpolate import interp1d 
@@ -68,6 +71,7 @@ class T_Signal :
         `fs` : Sampling frequency (Hz)  
         `unit` : unit of the signal
         `name` : name of the signal
+        `t0` : The beginning of the signal
         """
 
         if data is None : self.data = None
@@ -98,12 +102,11 @@ class T_Signal :
 
 
 
-    def plot_fft(self,  n: int=None, 
-                        n_factor: float=None,
-                        choose_next_power_of_2 = True,
-                        print_choices = False,
-                        dB_mode = False,
-                        **kwargs):
+    def fft(self,   n: int=None, 
+                    n_factor: float=None,
+                    choose_next_power_of_2 = True,
+                    print_choices = False,
+                    **kwargs):
         """
         Args 
         -----
@@ -114,16 +117,12 @@ class T_Signal :
         `choose_next_power_of_2` : bool
             If true use the newxt power of 2 istead of `n`
         `print_choices` : bool
-        `dB_mode` : bool
-            Impact the output signal
 
         Return
         ------
         `xf` : Array
         `yf_real` : Array
-            It is impacted by `dB_mode`
         """
-        # TODO only retrun the fft signal, and make the plot throug it
         # TODO use apodization windows (hamming,...)
 
         if n is None : n = len(self.data)
@@ -139,29 +138,15 @@ class T_Signal :
         if print_choices :
             print(f"FFT : n={n}, len(data)={len(self.data)}")
 
-        plt.figure()
         # FFT avec 0 padding sur n
-        yf = np.fft.fft(self.data,n)
-        xf = np.linspace(0,self.fs/2,n//2-1)
-        # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
-        yf_real = 2/np.size(self.data)*np.abs(yf[0:n//2-1])
-        if dB_mode : yf_real = 20*np.log10(yf_real)
-        # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
-        # division par la taille de max_spectro pour prendre en compte le pas 
-        plt.plot(xf,yf_real)
-        plt.title(self.name + " FFT")
-        if dB_mode : 
-            plt.ylabel("Amplitude(dB)")
-            plt.xlabel("frequency(Hz)")
+        yf = spf.rfft(self.data,n)
+        xf = spf.rfftfreq(n,1/self.fs)
+        return FFT_signal(  data = yf,
+                            fs = 1/(xf[1]-xf[0]),
+                            unit = '',
+                            name = f"{self.name} FFT",
+                            f0 = 0)
 
-        # TODO make C_signal compatible with fft signal ?
-        # fft_sig = self.empty_copy()
-        # fft_sig.name += ' fft'
-        # fft_sig.data = yf_real
-        # fft_sig.fs = 1/(xf[1]-xf[0])
-        # fft_sig.unit = 'dB' if dB_mode else 'FFT_unit'
-
-        return xf, yf_real
 
 
 
@@ -192,7 +177,7 @@ class T_Signal :
         for time in l_times :
             X = [time]*2
             Y = [yl,yh]
-            plt.plot(X,Y,'--',label=f"t={l_times}s",**kwargs)
+            plt.plot(X,Y,'--',label=f"t={time}s",**kwargs)
 
     def plot_ADD_values(self,   l_values:list[float],
                                 l_labels:list[str]=None,
@@ -216,7 +201,7 @@ class T_Signal :
         `t` : flaot
             Time for which the nearest index is caluclated
         """
-        return int(t*self.fs)
+        return int((t-self.t0)*self.fs)
 
     def recut(self,t1: float=0,t2: float=None) :
         """
@@ -228,7 +213,7 @@ class T_Signal :
             End of the recuted signal, use None to keep the signal until the end
         """
         if t1 < self.t_min : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min
-        if self.t_max < t2 : print("Warning : t_max < t2 , we used t1 = t_max istead"); t2 = self.t_max
+        if self.t_max < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max
 
         if t2 is None : t2 = self.t_max
         i1,i2 = self.index_at(t1), self.index_at(t2)
@@ -270,70 +255,68 @@ class T_Signal :
         plt.grid(True)
         N = len(data)
         X=np.linspace(start=self.ft_min() , stop=self.ft_max(), num=N)
-
         plt.plot(X, data,label = f"{self.name}",**kwargs)
         plt.xlabel("time (s)")
         if unit is None : plt.ylabel('Amplitude')
         else : plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name}"+add_to_title)
 
-    def plot_FFT_depreceated(self,      color=None, 
-                            label=None,
-                            add_50Hz=False,
-                            add_freqs : list[float]|None = None,
-                            new_figure = True,
-                            with_0_Hz = False,
-                            add_3dB = False):
-        '''
-        Args 
-        ------
-        `color` = The color used to draw the signal
+    # def plot_FFT_depreceated(self,      color=None, 
+    #                         label=None,
+    #                         add_50Hz=False,
+    #                         add_freqs : list[float]|None = None,
+    #                         new_figure = True,
+    #                         with_0_Hz = False,
+    #                         add_3dB = False):
+    #     '''
+    #     Args 
+    #     ------
+    #     `color` = The color used to draw the signal
 
-        `label` = Not used for the moment
+    #     `label` = Not used for the moment
 
-        `add_50Hz` = Draw 50 Hz and harmonics 
+    #     `add_50Hz` = Draw 50 Hz and harmonics 
         
-        `add_freqs` = Liste de fréquence à ajouter au graphique
+    #     `add_freqs` = Liste de fréquence à ajouter au graphique
         
-        `new_figure` = Crée une nouvelle figure avant l'affichage
+    #     `new_figure` = Crée une nouvelle figure avant l'affichage
         
-        `with_0Hz` = if False, it subtract the mean of the signal to the signal itself, before doing the FFT
-        '''
-        if new_figure : plt.figure()
-        if add_freqs is None : add_freqs = []
+    #     `with_0Hz` = if False, it subtract the mean of the signal to the signal itself, before doing the FFT
+    #     '''
+    #     if new_figure : plt.figure()
+    #     if add_freqs is None : add_freqs = []
         
-        self.data
-        self.fs
+    #     self.data
+    #     self.fs
 
-        Te = 1/self.fs                      # periode d'echantillonage
-        N = len(self.data)                  # Nombre de point de données
+    #     Te = 1/self.fs                      # periode d'echantillonage
+    #     N = len(self.data)                  # Nombre de point de données
 
-        if with_0_Hz : yf = fft(self.data)[:N//2]          # Pour ne garder que la moitié
-        else : yf = fft(self.data-self.data.mean())[:N//2]         
-        yf = abs(yf)                        # Passage au module
-        yf = yf/max(yf)                     # Normalisation
-        yf_db = 20*np.log10(yf)             # Convertion en dB
-        yf_db = [-100 if e==-np.inf else e for e in yf_db]
-        xf = fftfreq(N, Te)[:N//2]          # Génération de l'echelle des fréquences
+    #     if with_0_Hz : yf = fft(self.data)[:N//2]          # Pour ne garder que la moitié
+    #     else : yf = fft(self.data-self.data.mean())[:N//2]         
+    #     yf = abs(yf)                        # Passage au module
+    #     yf = yf/max(yf)                     # Normalisation
+    #     yf_db = 20*np.log10(yf)             # Convertion en dB
+    #     yf_db = [-100 if e==-np.inf else e for e in yf_db]
+    #     xf = fftfreq(N, Te)[:N//2]          # Génération de l'echelle des fréquences
 
-        if add_50Hz :
-            v_min = min(yf_db)
-            plt.plot([50,50,100,100,150,150,200,200],[v_min,-3,-3,v_min]*2,linestyle='-',color='orange',label='50Hz et harmoniques')
+    #     if add_50Hz :
+    #         v_min = min(yf_db)
+    #         plt.plot([50,50,100,100,150,150,200,200],[v_min,-3,-3,v_min]*2,linestyle='-',color='orange',label='50Hz et harmoniques')
 
-        min_db = np.min(yf_db)
-        for freq in add_freqs : 
-            print(f"min_db = {min_db}")
-            plt.plot([freq,freq],[min_db,0],'--',color='#f82',label=f"{freq} Hz")
-            plt.annotate(f" {freq} Hz",(freq,-70),color='#f82')
+    #     min_db = np.min(yf_db)
+    #     for freq in add_freqs : 
+    #         print(f"min_db = {min_db}")
+    #         plt.plot([freq,freq],[min_db,0],'--',color='#f82',label=f"{freq} Hz")
+    #         plt.annotate(f" {freq} Hz",(freq,-70),color='#f82')
 
-        plt.plot(xf,yf_db,label=f"FFT de {self.name}",color=color)
-        if add_3dB : plt.plot([0,self.fs/2],[-3,-3],'--r',label="-3 dB")
-        plt.grid()
-        plt.legend(loc="lower left")
-        plt.title(f"FFT du signal {self.name}")
-        plt.ylabel('Amplitude normalisé (dB)')
-        plt.xlabel('fréquence (Hz)')
-
+    #     plt.plot(xf,yf_db,label=f"FFT de {self.name}",color=color)
+    #     if add_3dB : plt.plot([0,self.fs/2],[-3,-3],'--r',label="-3 dB")
+    #     plt.grid()
+    #     plt.legend(loc="lower left")
+    #     plt.title(f"FFT du signal {self.name}")
+    #     plt.ylabel('Amplitude normalisé (dB)')
+    #     plt.xlabel('fréquence (Hz)')
 
 
 
@@ -536,23 +519,24 @@ class FFT_signal :
         # xf = np.linspace(0,self.fs/2,n//2-1)
         # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
 
-
-        n = len(self.data)          #deb Does it works ?  
-        yf_modul = 2/np.size(self.data)*np.abs(self.data[0:n//2-1])
+        N = len(self.data)
+        n =  (len(self.data)-1)*2 if N%2 != 0 else len(self.data)*2-1
+        yf_modul = 2/n*np.abs(self.data)
+        # yf_modul = 2/np.size(self.data)*np.abs(self.data[0:n//2-1])
         # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
         # division par la taille de max_spectro pour prendre en compte le pas 
-        yf_phase = np.angle(self.data[n])
+        yf_phase = np.angle(self.data)
 
         self.Modul = FFT_modul( data = yf_modul,
                                 fs = self.fs,
                                 unit = '?',
-                                name = self.name + ' (FFT_modul)',
+                                name = f"{self.name} (FFT_modul)",
                                 f0 = self.f0)
 
         self.Phase = FFT_phase( data = yf_phase,
                                 fs = self.fs,
                                 unit = '?',
-                                name = self.name + ' (FFT_phase)',
+                                name = f"{self.name} (FFT_phase)",
                                 f0 = self.f0)
 
 
@@ -584,11 +568,27 @@ class FFT_signal :
         # self.phase_f_at = self.Phase.f_at   # TODO To define phase_f_at
 
 
+    def plot_ADDmodul_box_on_recut(self,f1:float,f2:float,**kwargs):
+        """
+        Args
+        ----
+        `f1` : beginnig frequency
+        `f2` : ending frequency 
+        """
+        self.Modul.plot_ADD_box_on_recut(f1,f2,**kwargs)
+
     def f_range(self)-> float : return len(self.data)/self.fs
 
 
 
-    def plot(self): pass
+    def plot(self,new_figure=True,figsize : tuple[int] =None,**kwargs):
+        plt.figure(figsize=figsize)
+        plt.subplot(211)
+        self.Modul.plot(new_figure=False,**kwargs)
+        plt.subplot(212)
+        self.Phase.plot(new_figure=False,**kwargs)
+
+
     def plot_ADD_freqs(self):pass
     def plot_ADD_box_on_recut(self):pass
 
@@ -616,7 +616,9 @@ class FFT_signal :
         # def phase_f_at_min(self):pass
         # def phase_f_at(self):pass
     
-    def ifft(self): pass # TODO implement ifft
+        
+
+
     def copy(self):
         return FFT_signal(  data = self.data.copy(),
                             fs = self.fs,
