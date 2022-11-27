@@ -259,7 +259,7 @@ class T_Signal :
         plt.xlabel("time (s)")
         if unit is None : plt.ylabel('Amplitude')
         else : plt.ylabel(f"Amplitude ({unit})")
-        plt.title(f"{self.name}"+add_to_title)
+        plt.title(f"{self.name} {add_to_title}")
 
 
 
