@@ -83,6 +83,7 @@ class T_Signal :
         self.unit = unit
         self.name = name
         self.t0 = t0
+        if self.data is not None : self.N = len(self.data)
 
     def mean(self)->float : return np.mean(self.data)
     def std(self)-> float : return np.std(self.data)
@@ -114,11 +115,11 @@ class T_Signal :
         """
         Args 
         -----
-        `n`: int (optional)
-            Size of the signal after zero padding. It's need `n`>= len(data)
+        `n`: int (default = len of the data)
+            number of point used to compute the fft (must be greater than the number of point in the signal)
         `n_factor` : float (optional)
             If not None, `n`=len(data)*`n_factor`
-        `choose_next_power_of_2` : bool
+        `choose_next_power_of_2` : bool (default = True)
             If true use the newxt power of 2 istead of `n`
         `print_choices` : bool
 
@@ -129,18 +130,18 @@ class T_Signal :
         """
         # TODO use apodization windows (hamming,...)
 
-        if n is None : n = len(self.data)
-        if n_factor is not None : n = int(len(self.data) * n_factor)
+        if n is None : n = self.N
+        if n_factor is not None : n = int(self.N * n_factor)
 
-        if n < len(self.data):
+        if n < self.N:
             print("n is smaller than self.data, we use n=len(self.data) instead")
-            n=len(self.data)
+            n=self.N
 
         if choose_next_power_of_2 :
             n = int(2**np.ceil(np.log(n) / np.log(2)))
 
         if print_choices :
-            print(f"FFT : n={n}, len(data)={len(self.data)}")
+            print(f"FFT : n={n}, len(data)={self.N}")
 
         # FFT avec 0 padding sur n
         yf = spf.rfft(self.data,n)
@@ -150,17 +151,36 @@ class T_Signal :
                             unit = '',
                             name = f"{self.name} FFT",
                             f0 = 0,
-                            nb_zero = n - len(self.data),
+                            nb_zero = n - self.N,
                             window = None)
 
-    def plot_ADD_box_on_recut(self,t1: float=None,t2: float=None,extra_margin: float=0,**kwargs) : 
+    def plot_ADD_box_on_recut(self,
+                                t1: float=None,
+                                t2: float=None,
+                                extra_margin_y: float=0,
+                                extra_margin_x: float=0,
+                                **kwargs)->None: 
+        """
+        Add a box on a previous plot
+
+        Args 
+        -----
+        `t1`: float (default = signal's start time)
+            Start time of the box
+        `t2`: float (default = signal's end time)
+            End time of the box
+        `extra_margin_x` : float (default = 0)
+        `extra_margin_y` : float (default = 0)
+        """                               
         if t1 is None : t1 = self.t_min
         if t2 is None : t2 = self.t_max
         yh = self.recut(t1,t2).max()
         yl = self.recut(t1,t2).min()
         e = yh-yl
-        yh += e * 0.1 + extra_margin # to set the upper margin
-        yl -= e * 0.1 + extra_margin# to set the lower margin
+        yh += e * 0.1 + extra_margin_y # to set the upper margin
+        yl -= e * 0.1 + extra_margin_y# to set the lower margin
+        t1 -= extra_margin_x
+        t2 -= extra_margin_x
         X = [t1,t2,t2,t1,t1]
         Y = [yh,yh,yl,yl,yh]
         plt.plot(X,Y,'--',**kwargs)
@@ -488,6 +508,7 @@ class FFT_signal :
         self.f0 = f0
         self.nb_zero = nb_zero
         self.window = window
+        if self.data is not None : self.N = len(self.data)
 
         self.__compute_modul_phase_from_data()
         self.__init_functions()
@@ -499,7 +520,7 @@ class FFT_signal :
         # xf = np.linspace(0,self.fs/2,n//2-1)
         # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
 
-        N = len(self.data)
+        N = self.N
         n =  (len(self.data)-1)*2 if N%2 != 0 else len(self.data)*2-1
         yf_modul = 2/(n-self.nb_zero) * np.abs(self.data)
         # yf_modul = 2/np.size(self.data)*np.abs(self.data[0:n//2-1])
@@ -550,14 +571,23 @@ class FFT_signal :
 
 
 
-    def f_range(self)-> float : return len(self.data)/self.fs
+    def f_range(self)-> float : return self.N/self.fs
 
-    def plot(self,new_figure=True,figsize : tuple[int] =None,**kwargs):
+    def plot(self,new_figure=True,figsize : tuple[int] =None,hspace=1,**kwargs):
+        """
+        Args :
+        ------
+        `new_figure` : (default = True)
+        `figsize` : (default = None) 
+        `hspace` : (default = 1)
+            space between the two subplot
+        """
         plt.figure(figsize=figsize)
         plt.subplot(211)
         self.Modul.plot(new_figure=False,**kwargs)
         plt.subplot(212)
         self.Phase.plot(new_figure=False,**kwargs)
+        plt.subplots_adjust(hspace=hspace)
 
     def plot_ADD_freqs(self):pass
     def plot_ADD_box_on_recut(self):pass
