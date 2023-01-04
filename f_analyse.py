@@ -29,7 +29,7 @@ from scipy.interpolate import interp1d
 
 
 
-class T_Signal :
+class C_Signal :
     """
     Methods
     -------
@@ -92,14 +92,12 @@ class T_Signal :
     def val_at_nearest_t(self,t: float)-> float : return self.data[int(t*self.fs)]
     def t_at_max(self)-> float : return np.argmax(self.data) / self.fs
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
-    def duration(self)-> float : return len(self.data)/self.fs
-    def ft_max(self)-> float : return self.t0 + self.duration()
-    def ft_min(self)-> float : return self.t0
+    def duration(self)-> float : return self.N/self.fs
+    def t_max(self)-> float : return self.t0 + self.duration()
+    def t_min(self)-> float : return self.t0
 
     @property
-    def t_max(self)-> float : return self.t0 + self.duration()
-    @property
-    def t_min(self)-> float : return self.t0
+    def N(self): return len(self.data)
 
     def plot_ADD_t_at_max(self,**kwargs): 
         self.plot_ADD_times([self.t_at_max()],**kwargs)
@@ -186,7 +184,7 @@ class T_Signal :
         plt.plot(X,Y,'--',**kwargs)
 
     def plot_ADD_mean(self,**kwargs):
-        X = [self.ft_max(), self.ft_min()]
+        X = [self.t_max(), self.t_min()]
         Y = [self.mean()]*2
         plt.plot(X,Y,'--',label=f"mean = {self.mean()}")
 
@@ -206,7 +204,7 @@ class T_Signal :
                                 l_labels:list[str]=None,
                                 l_colors:list[str]=None,
                                 **kwargs):
-        X = [self.ft_max(), self.ft_min()]
+        X = [self.t_max(), self.t_min()]
         if l_labels is None : l_labels = [None]*len(l_values)
         if l_colors is None : l_colors = [None]*len(l_values)
 
@@ -274,7 +272,7 @@ class T_Signal :
 
         plt.grid(True)
         N = len(data)
-        X=np.linspace(start=self.ft_min() , stop=self.ft_max(), num=N)
+        X=np.linspace(start=self.t_min() , stop=self.t_max(), num=N)
         plt.plot(X, data,label = f"{self.name}",**kwargs)
         plt.xlabel("time (s)")
         if unit is None : plt.ylabel('Amplitude')
@@ -284,9 +282,48 @@ class T_Signal :
 
 
 
+class T_signal:
+    def __init__(   self,
+                    data : np.ndarray | list = None,
+                    fs : float = 1,
+                    unit : str = '',
+                    name : str = '',
+                    t0 : float = 0): #TODO make it fonctional ?
+        
+        self.SIG = C_Signal(data=data,
+                            fs=fs,
+                            unit=unit,
+                            name=name,
+                            t0=t0)
 
-
-
+        self.recut = self.SIG.recut
+        self.mean = self.SIG.mean
+        self.std = self.SIG.stds
+        self.max = self.SIG.max
+        self.min = self.SIG.min
+        self.val_at_nearest_t = self.SIG.val_at_nearest_t
+        self.t_at_max = self.SIG.t_at_max
+        self.t_at_min = self.SIG.t_at_min
+        self.duration = self.SIG.duration
+        self.t_max = self.SIG.t_max
+        self.t_min = self.SIG.t_min
+        self.N = self.SIG.N
+        self.plot_ADD_t_at_max = self.SIG.plot_ADD_t_at_max
+        self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
+        self.fft = self.SIG.fft
+        self.plot_ADD_t_at_max = self.SIG.plot_ADD_t_at_max 
+        self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
+        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box_on_recut
+        self.plot_ADD_times = self.SIG.plot_ADD_times
+        self.plot_ADD_time = self.SIG.plot_ADD_time # TO implement
+        self.plot_ADD_values = self.SIG.plot_ADD_values
+        self.plot_ADD_mean = self.SIG.mean
+        self.index_at = self.SIG.index_at
+        self.recut = self.SIG.recut
+        self.empty_copy = self.SIG.empty_copy
+        self.copy = self.SIG.copy
+        self.plot = self.SIG.plot
+        
 
 
 
