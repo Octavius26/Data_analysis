@@ -31,32 +31,41 @@ from scipy.interpolate import interp1d
 
 class C_Signal :
     """
-    Methods
-    -------
-        
-    Who give a float :
+    Who return an amplitude value
+    - `mean`
     - `std`
     - `max`
     - `min`
-    - `val_at_nearest_t(t:)`
+    - `val_at_nearset_t`
+
+    Who return a time value
     - `t_at_max`
     - `t_at_min`
     - `duration`
-
-    Who plot something :
+    - `t_max`
+    - `t_min`
+    
+    Who plot something
     - `plot`
-    - `plot_ADD_box_on_recut`
-    - `plot_ADD_times`
-    - `plot_ADD_values`
 
-    Who return a signal :
+    - `plot_ADD_t_at_max`
+    - `plot_ADD_t_at_min`
+    - `plot_ADD_t`  =========================== to implement
+    - `plot_ADD_times` ======================== to delete
+    - `plot_ADD_box_on_recut`
+    - `plot_ADD_mean`
+    - `plot_ADD_val` ========================== to implement
+    - `plot_ADD_values` ======================= to delete
+
+    Who return a signal
     - `recut`
+
     - `copy`
     - `empty_copy`
-
-    - `fft`
-    """
     
+    Others
+    - `index_at`
+    """
 
     def __init__(           self,
                             data : np.ndarray | list = None,
@@ -90,6 +99,7 @@ class C_Signal :
     def max(self)-> float : return np.max(self.data)
     def min(self)-> float : return np.min(self.data)
     def val_at_nearest_t(self,t: float)-> float : return self.data[int(t*self.fs)]
+
     def t_at_max(self)-> float : return np.argmax(self.data) / self.fs
     def t_at_min(self)-> float : return np.argmin(self.data) / self.fs
     def duration(self)-> float : return self.N/self.fs
@@ -99,58 +109,35 @@ class C_Signal :
     @property
     def N(self): return len(self.data)
 
+    def plot(   self,
+                new_unit : tuple[str,float] = None,
+                add_to_title='',
+                new_figure = True,
+                **kwargs):
+
+        # TODO create a unit class
+        
+        if new_figure : plt.figure()
+        unit = self.unit 
+        data = self.data
+        if new_unit is not None :
+            unit = new_unit[0]
+            data = data*new_unit[1]
+
+        plt.grid(True)
+        N = len(data)
+        X=np.linspace(start=self.t_min() , stop=self.t_max(), num=N)
+        plt.plot(X, data,label = f"{self.name}",**kwargs)
+        plt.xlabel("time (s)")
+        if unit is None : plt.ylabel('Amplitude')
+        else : plt.ylabel(f"Amplitude ({unit})")
+        plt.title(f"{self.name} {add_to_title}")
+
     def plot_ADD_t_at_max(self,**kwargs): 
         self.plot_ADD_times([self.t_at_max()],**kwargs)
         
     def plot_ADD_t_at_min(self,**kwargs): 
         self.plot_ADD_times([self.t_at_min()],**kwargs)
-
-    def fft(self,   n: int=None,
-                    n_factor: float=None,
-                    choose_next_power_of_2 = True,
-                    print_choices = False,
-                    **kwargs):
-        """
-        Args 
-        -----
-        `n`: int (default = len of the data)
-            number of point used to compute the fft (must be greater than the number of point in the signal)
-        `n_factor` : float (optional)
-            If not None, `n`=len(data)*`n_factor`
-        `choose_next_power_of_2` : bool (default = True)
-            If true use the newxt power of 2 istead of `n`
-        `print_choices` : bool
-
-        Return
-        ------
-        `xf` : Array
-        `yf_real` : Array
-        """
-        # TODO use apodization windows (hamming,...)
-
-        if n is None : n = self.N
-        if n_factor is not None : n = int(self.N * n_factor)
-
-        if n < self.N:
-            print("n is smaller than self.data, we use n=len(self.data) instead")
-            n=self.N
-
-        if choose_next_power_of_2 :
-            n = int(2**np.ceil(np.log(n) / np.log(2)))
-
-        if print_choices :
-            print(f"FFT : n={n}, len(data)={self.N}")
-
-        # FFT avec 0 padding sur n
-        yf = spf.rfft(self.data,n)
-        xf = spf.rfftfreq(n,1/self.fs)
-        return FFT_signal(  data = yf,
-                            fs = 1/(xf[1]-xf[0]),
-                            unit = '',
-                            name = f"{self.name} FFT",
-                            f0 = 0,
-                            nb_zero = n - self.N,
-                            window = None)
 
     def plot_ADD_box_on_recut(self,
                                 t1: float=None,
@@ -255,34 +242,46 @@ class C_Signal :
                         name = self.name,
                         t0 = self.t_min)
 
-    def plot(   self,
-                new_unit : tuple[str,float] = None,
-                add_to_title='',
-                new_figure = True,
-                **kwargs):
-
-        # TODO create a unit class
-        
-        if new_figure : plt.figure()
-        unit = self.unit 
-        data = self.data
-        if new_unit is not None :
-            unit = new_unit[0]
-            data = data*new_unit[1]
-
-        plt.grid(True)
-        N = len(data)
-        X=np.linspace(start=self.t_min() , stop=self.t_max(), num=N)
-        plt.plot(X, data,label = f"{self.name}",**kwargs)
-        plt.xlabel("time (s)")
-        if unit is None : plt.ylabel('Amplitude')
-        else : plt.ylabel(f"Amplitude ({unit})")
-        plt.title(f"{self.name} {add_to_title}")
-
-
 
 
 class T_signal:
+    """
+    Who return an amplitude value
+    - `mean`
+    - `std`
+    - `max`
+    - `min`
+    - `val_at_nearset_t`
+
+    Who return a time value
+    - `t_at_max`
+    - `t_at_min`
+    - `duration`
+    - `t_max`
+    - `t_min`
+    
+    Who plot something
+    - `plot`
+
+    - `plot_ADD_t_at_max`
+    - `plot_ADD_t_at_min`
+    - `plot_ADD_t`  =========================== to implement
+    - `plot_ADD_times` ======================== to delete
+    - `plot_ADD_box_on_recut`
+    - `plot_ADD_mean`
+    - `plot_ADD_val` ========================== to implement
+    - `plot_ADD_values` ======================= to delete
+
+    Who return a signal
+    - `recut`
+
+    - `copy`
+    - `empty_copy`
+    
+    Others
+    - `index_at`
+    """
+
     def __init__(   self,
                     data : np.ndarray | list = None,
                     fs : float = 1,
@@ -298,7 +297,7 @@ class T_signal:
 
         self.recut = self.SIG.recut
         self.mean = self.SIG.mean
-        self.std = self.SIG.stds
+        self.std = self.SIG.std
         self.max = self.SIG.max
         self.min = self.SIG.min
         self.val_at_nearest_t = self.SIG.val_at_nearest_t
