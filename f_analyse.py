@@ -62,9 +62,12 @@ class C_Signal :
 
     - `copy`
     - `empty_copy`
+
+    - `fft`
     
     Others
     - `index_at`
+    - `N`
     """
 
     def __init__(           self,
@@ -242,6 +245,52 @@ class C_Signal :
                         name = self.name,
                         t0 = self.t_min)
 
+    def fft(self,   n: int=None,
+                    n_factor: float=None,
+                    choose_next_power_of_2 = True,
+                    print_choices = False,
+                    **kwargs):
+        """
+        Args 
+        -----
+        `n`: int (default = len of the data)
+            number of point used to compute the fft (must be greater than the number of point in the signal)
+        `n_factor` : float (optional)
+            If not None, `n`=len(data)*`n_factor`
+        `choose_next_power_of_2` : bool (default = True)
+            If true use the newxt power of 2 istead of `n`
+        `print_choices` : bool
+
+        Return
+        ------
+        `xf` : Array
+        `yf_real` : Array
+        """
+        # TODO use apodization windows (hamming,...)
+
+        if n is None : n = self.N
+        if n_factor is not None : n = int(self.N * n_factor)
+
+        if n < self.N:
+            print("n is smaller than self.data, we use n=len(self.data) instead")
+            n=self.N
+
+        if choose_next_power_of_2 :
+            n = int(2**np.ceil(np.log(n) / np.log(2)))
+
+        if print_choices :
+            print(f"FFT : n={n}, len(data)={self.N}")
+
+        # FFT avec 0 padding sur n
+        yf = spf.rfft(self.data,n)
+        xf = spf.rfftfreq(n,1/self.fs)
+        return FFT_signal(  data = yf,
+                            fs = 1/(xf[1]-xf[0]),
+                            unit = '',
+                            name = f"{self.name} FFT",
+                            f0 = 0,
+                            nb_zero = n - self.N,
+                            window = None)
 
 
 class T_signal:
@@ -277,9 +326,12 @@ class T_signal:
 
     - `copy`
     - `empty_copy`
+
+    - `fft`
     
     Others
     - `index_at`
+    - `N`
     """
 
     def __init__(   self,
@@ -295,70 +347,87 @@ class T_signal:
                             name=name,
                             t0=t0)
 
-        self.recut = self.SIG.recut
         self.mean = self.SIG.mean
         self.std = self.SIG.std
         self.max = self.SIG.max
         self.min = self.SIG.min
         self.val_at_nearest_t = self.SIG.val_at_nearest_t
+
         self.t_at_max = self.SIG.t_at_max
         self.t_at_min = self.SIG.t_at_min
         self.duration = self.SIG.duration
         self.t_max = self.SIG.t_max
         self.t_min = self.SIG.t_min
-        self.N = self.SIG.N
+
+        self.plot = self.SIG.plot
+
         self.plot_ADD_t_at_max = self.SIG.plot_ADD_t_at_max
         self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
-        self.fft = self.SIG.fft
-        self.plot_ADD_t_at_max = self.SIG.plot_ADD_t_at_max 
-        self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
-        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box_on_recut
+        self.plot_ADD_t = self.SIG.plot_ADD_t #TODO implement it
         self.plot_ADD_times = self.SIG.plot_ADD_times
-        self.plot_ADD_time = self.SIG.plot_ADD_time # TO implement
-        self.plot_ADD_values = self.SIG.plot_ADD_values
+        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box_on_recut
         self.plot_ADD_mean = self.SIG.mean
-        self.index_at = self.SIG.index_at
+        self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
+        self.plot_ADD_values = self.SIG.plot_ADD_values
+
         self.recut = self.SIG.recut
-        self.empty_copy = self.SIG.empty_copy
+
         self.copy = self.SIG.copy
-        self.plot = self.SIG.plot
+        self.empty_copy = self.SIG.empty_copy
+
+        self.fft = self.SIG.fft
+        
+        self.index_at = self.SIG.index_at
+        self.N = self.SIG.N
         
 
 
 
-
-
-
-
-
-
-class F_signal(T_Signal):
+class F_signal:
     """
-    Methods
-    -------
-        
-    Who give a float :
-    - `std()`
-    - `mean()`
-    - `max()`
-    - `min()`
-    - `val_at_nearest_t` => `val_at_nearest_f`
-    - `t_at_max` => `f_at_max`
-    - `t_at_min` => `f_at_min`
-    - `duration` => `f_range`
+    Who return an amplitude value
+    - `mean`
+    - `std`
+    - `max`
+    - `min`
+    - `val_at_nearset_t`
 
-    Who plot something :
-    - `plot()`
-    - `plot_ADD_box_on_recut` #TODO redifne plot_ADD_box_on_recut
-    - `plot_ADD_freqs`
-    - `plot_ADD_values`
+    Who return a time value
+    - `f_at_max`
+    - `f_at_min`
+    - `f_range`
+    - `f_max`
+    - `f_min`
+    
+    Who plot something
+    - `plot`
 
-    Who return a T_signal :
-    - `recut()`
-    - `copy()`
-    - `empty_copy()`
+    - `plot_ADD_f_at_max`
+    - `plot_ADD_f_at_min`
+    - `plot_ADD_f`  =========================== to implement
+    - `plot_ADD_frequences` ======================== to delete
+    - `plot_ADD_box_on_recut`
+    - `plot_ADD_mean`
+    - `plot_ADD_val` ========================== to implement
+    - `plot_ADD_values` ======================= to delete
+
+    Who return a signal
+    - `recut`
+
+    - `copy`
+    - `empty_copy`
+
+    
+    Others
+    - `index_at`
+    - `N`
     """
-    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '',f0 = 0):
+
+    def __init__(   self,
+                    data : np.ndarray | list = None,
+                    fs : float = 1,
+                    unit : str = '',
+                    name : str = ''): #TODO make it fonctional ?
         """
         Args :
         ------
@@ -367,86 +436,77 @@ class F_signal(T_Signal):
         `unit` : unit of the signal
         `name` : name of the signal
         """
-        super().__init__(data, fs, unit, name, f0)
+        
+        self.SIG = C_Signal(data=data,
+                            fs=fs,
+                            unit=unit,
+                            name=name,
+                            t0=0)
 
-        # def f_at_max(self,**kwrags): return self.t_at_max(**kwrags)
-        self.f_at_max = self.t_at_max
-        self.f_at_min = self.t_at_min
-        self.val_at_nearest_f = self.val_at_nearest_t
-        self.f_range = self.duration
+        self.mean = self.SIG.mean
+        self.std = self.SIG.std
+        self.max = self.SIG.max
+        self.min = self.SIG.min
+        self.val_at_nearest_t = self.SIG.val_at_nearest_t
+
+        self.f_at_max = self.SIG.t_at_max
+        self.f_at_min = self.SIG.t_at_min
+        self.f_range = self.SIG.duration #TODO check it
+        self.f_max = self.SIG.t_max
+        self.f_min = self.SIG.t_min
+
+        self.plot = self.SIG.plot
+
+        self.plot_ADD_f_at_max = self.SIG.plot_ADD_t_at_max
+        self.plot_ADD_f_at_min = self.SIG.plot_ADD_t_at_min
+        self.plot_ADD_f = self.SIG.plot_ADD_t #TODO implement it
+        self.plot_ADD_frequences = self.SIG.plot_ADD_times
+        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box_on_recut
+        self.plot_ADD_mean = self.SIG.mean
+        self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
+        self.plot_ADD_values = self.SIG.plot_ADD_values
+
+        self.recut = self.SIG.recut
+
+        self.copy = self.SIG.copy
+        self.empty_copy = self.SIG.empty_copy
+        
+        self.index_at = self.SIG.index_at
+        self.N = self.SIG.N
+        
     
-    @property
-    def f_min(self)->float: return self.t_min
-    @property
-    def f_max(self)->float: return self.t_max
-
-    def empty_copy(self):
-        """Copy everything exept data (including f0)"""
-        return F_signal(data = None,
-                        fs = self.fs,
-                        unit = self.unit,
-                        name = self.name,
-                        f0 = self.f_min)
-
-    def copy(self):
-        return F_signal(data = self.data.copy(),
-                        fs = self.fs,
-                        unit = self.unit,
-                        name = self.name,
-                        f0 = self.f_min)
-
-    def plot(self, new_unit: tuple[str, float] = None, add_to_title='', new_figure=True, **kwargs):
-        super().plot(new_unit, add_to_title, new_figure, **kwargs)
-        plt.xlabel("Frequency (Hz)")
-        
-    def plot_ADD_freqs(self, l_freqs: list | np.ndarray, **kwargs):
-        yh = self.max()
-        yl = self.min()
-        e = yh-yl
-        yh += e * 0.1 # to set the upper margin
-        yl -= e * 0.1 # to set the lower margin
-        
-        for time in l_freqs :
-            X = [time]*2
-            Y = [yl,yh]
-            plt.plot(X,Y,'--',label=f"f={time} Hz",**kwargs)
-
-    # def plot_ADD_f_at_max(self,**kwargs):
-    #     return super().plot_ADD_t_at_max(**kwargs)
-
-    # def plot_ADD_f_at_min(self,**kwargs):
-    #     return super().plot_ADD_t_at_min(**kwargs)
-
-
-    def plot_ADD_f_at_max(self,**kwargs): 
-        self.plot_ADD_freqs([self.f_at_max()],**kwargs)
-        
-    def plot_ADD_f_at_min(self,**kwargs): 
-        self.plot_ADD_freqs([self.f_at_min()],**kwargs)
 
 
 
 
 
 
-class FFT_modul(F_signal):
-    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
-        super().__init__(data, fs, unit, name, f0)
-
-    def plot_ADD_moduls(self, l_modul: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
-        return super().plot_ADD_values(l_modul, l_labels, l_colors, **kwargs)
 
 
 
 
 
 
-class FFT_phase(F_signal):
-    def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
-        super().__init__(data, fs, unit, name, f0)
 
-    def plot_ADD_phases(self, l_phases: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
-        return super().plot_ADD_values(l_phases, l_labels, l_colors, **kwargs)
+
+# class FFT_modul:
+#     def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
+#         super().__init__(data, fs, unit, name, f0)
+
+#     def plot_ADD_moduls(self, l_modul: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
+#         return super().plot_ADD_values(l_modul, l_labels, l_colors, **kwargs)
+
+
+
+
+
+
+# class FFT_phase(F_signal):
+#     def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
+#         super().__init__(data, fs, unit, name, f0)
+
+#     def plot_ADD_phases(self, l_phases: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
+#         return super().plot_ADD_values(l_phases, l_labels, l_colors, **kwargs)
 
 
 
@@ -526,17 +586,23 @@ class FFT_signal :
         Args :
         ------
         `data` : Array or list of complexes values
-        `fs` : Sampling frequency (Hz)  
+        `fs` : << Sampling frequency >> calculated by 1/(f1-f0)
         `unit` : unit of the signal
         `name` : name of the signal
         `f0` : beginning of the signal
         `nb_zero` : the number of zeros added for 0 padding
         `window` : the appodization window used #TODO exploiter la fenêtre d'appodisation 
         """
+
+
+
+
+
         if data is None : self.data = None
         elif type(data)==np.ndarray : self.data = data 
         elif type(data)==list : self.data = np.array(data)
         else : warn("Wrong data type")
+
 
         self.fs = fs
         self.unit = unit
@@ -544,7 +610,6 @@ class FFT_signal :
         self.f0 = f0
         self.nb_zero = nb_zero
         self.window = window
-        if self.data is not None : self.N = len(self.data)
 
         self.__compute_modul_phase_from_data()
         self.__init_functions()
@@ -557,24 +622,22 @@ class FFT_signal :
         # xf = np.fft.fftfreq(n,d=1/fs)[:n//2-1]
 
         N = self.N
-        n =  (len(self.data)-1)*2 if N%2 != 0 else len(self.data)*2-1
+        n = (len(self.data)-1)*2 if N%2 != 0 else len(self.data)*2-1
         yf_modul = 2/(n-self.nb_zero) * np.abs(self.data)
         # yf_modul = 2/np.size(self.data)*np.abs(self.data[0:n//2-1])
         # multiplication par 2 car puissances divisée entre freqs positifs et négatifs
         # division par la taille de max_spectro pour prendre en compte le pas 
         yf_phase = np.angle(self.data)
 
-        self.Modul = FFT_modul( data = yf_modul,
+        self.Modul = F_signal( data = yf_modul,
                                 fs = self.fs,
                                 unit = '?',
-                                name = f"{self.name} (FFT_modul)",
-                                f0 = self.f0)
+                                name = f"{self.name} (FFT_modul)")
 
-        self.Phase = FFT_phase( data = yf_phase,
+        self.Phase = F_signal( data = yf_phase,
                                 fs = self.fs,
-                                unit = '?',
-                                name = f"{self.name} (FFT_phase)",
-                                f0 = self.f0)
+                                unit = 'rad ?',
+                                name = f"{self.name} (FFT_phase)")
 
     def __init_functions(self):
         self.plot_modul = self.Modul.plot
@@ -642,7 +705,8 @@ class FFT_signal :
                             name = self.name,
                             f0 = self.f0)
 
-
+    @property
+    def N(self): return len(self.data)
 
 
 
