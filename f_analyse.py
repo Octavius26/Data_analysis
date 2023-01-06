@@ -40,10 +40,18 @@ class C_Signal :
 
     Who return a time value
     - `t_at_max`
+        Ne rend qu'une valeur (la première rencontrée ?) #TODO check it
     - `t_at_min`
+        Ne rend qu'une valeur (la première rencontrée ?) #TODO check it
     - `duration`
     - `t_max`
     - `t_min`
+    
+    - `t_at_val` ========= #TODO to implement
+        - rend un tableau des valeurs de t telle que f(t)=val
+        - comme la fonction est discrète, on peut ne pas tomber sur la valeur exacte
+            - utiliser une interpolation linéaire ?
+            - rendre toutes les valeurs à avec statifaisant à peu près la condition ?
     
     Who plot something
     - `plot`
@@ -136,13 +144,11 @@ class C_Signal :
         else : plt.ylabel(f"Amplitude ({unit})")
         plt.title(f"{self.name} {add_to_title}")
 
-    def plot_ADD_t_at_max(self,**kwargs): 
-        self.plot_ADD_times([self.t_at_max()],**kwargs)
         
     def plot_ADD_t_at_min(self,**kwargs): 
         self.plot_ADD_times([self.t_at_min()],**kwargs)
 
-    def plot_ADD_box_on_recut(self,
+    def plot_ADD_box(self,
                                 t1: float=None,
                                 t2: float=None,
                                 extra_margin_y: float=0,
@@ -178,29 +184,12 @@ class C_Signal :
         Y = [self.mean()]*2
         plt.plot(X,Y,'--',label=f"mean = {self.mean()}")
 
-    def plot_ADD_times(self, l_times:list|np.ndarray, **kwargs):
-        yh = self.max()
-        yl = self.min()
-        e = yh-yl
-        yh += e * 0.1 # to set the upper margin
-        yl -= e * 0.1 # to set the lower margin
-        
-        for time in l_times :
-            X = [time]*2
-            Y = [yl,yh]
-            plt.plot(X,Y,'--',label=f"t={time}s",**kwargs)
 
-    def plot_ADD_values(self,   l_values:list[float],
-                                l_labels:list[str]=None,
-                                l_colors:list[str]=None,
-                                **kwargs):
+    def plot_ADD_val(self,val,**kwargs):
         X = [self.t_max(), self.t_min()]
-        if l_labels is None : l_labels = [None]*len(l_values)
-        if l_colors is None : l_colors = [None]*len(l_values)
+        Y = [val,val]
+        plt.plot(X,Y,'--',label=f"{val} {self.unit}",**kwargs)
 
-        for value,label,color in zip(l_values,l_labels,l_colors):
-            Y = [value]*2
-            plt.plot(X,Y,'--',label=label,color=color,**kwargs)
 
     def index_at(self,t: float):
         """
@@ -365,7 +354,7 @@ class T_signal:
         self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
         self.plot_ADD_t = self.SIG.plot_ADD_t #TODO implement it
         self.plot_ADD_times = self.SIG.plot_ADD_times
-        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box_on_recut
+        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box
         self.plot_ADD_mean = self.SIG.mean
         self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
         self.plot_ADD_values = self.SIG.plot_ADD_values
@@ -380,6 +369,92 @@ class T_signal:
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
         
+
+    @property
+    def data(self): return self.SIG.data
+    @data.setter
+    def data(self,new_data): self.SIG.data = new_data
+
+    @property
+    def name(self): return self.SIG.name
+    @name.setter
+    def name(self,new_name): self.SIG.name = new_name
+
+    @property
+    def t0(self): return self.SIG.t0
+    @t0.setter
+    def t0(self,new_t0): self.SIG.t0 = new_t0
+    def plot_ADD_t(self,t:float,**kwargs):
+        """ Plot a vertical line
+
+        Args 
+        -----
+        `t`: float
+            time value for the vertical line
+        """
+        yh = self.max()
+        yl = self.min()
+        e = yh-yl
+        yh += e * 0.1 # to set the upper margin
+        yl -= e * 0.1 # to set the lower margin
+        
+        X = [t]*2
+        Y = [yl,yh]
+        plt.plot(X,Y,'--',label=f"t={t}s",**kwargs)
+
+
+    def plot_ADD_t_at_max(self,**kwargs): 
+        """Plot a vertical line where the signal is maximal"""
+        self.plot_ADD_t(self.t_at_max(),**kwargs)
+
+
+    def fft_new(self,   
+                n: int=None,
+                n_factor: float=None,
+                choose_next_power_of_2 = True,
+                print_choices = False,
+                **kwargs):
+        """
+        Args 
+        -----
+        `n`: int (default = len of the data)
+            number of point used to compute the fft (must be greater than the number of point in the signal)
+        `n_factor` : float (default = not used)
+            If not None, `n`=len(data)*`n_factor`
+        `choose_next_power_of_2` : bool (default = True)
+            If true use the newxt power of 2 istead of `n`
+        `print_choices` : bool (default = False)
+
+        Return
+        ------
+        `xf` : Array
+        `yf_real` : Array
+        """
+        # TODO use apodization windows (hamming,...)
+
+        if n is None : n = self.N
+        if n_factor is not None : n = int(self.N * n_factor)
+
+        if n < self.N:
+            print("n is smaller than self.data, we use n=len(self.data) instead")
+            n=self.N
+
+        if choose_next_power_of_2 :
+            n = int(2**np.ceil(np.log(n) / np.log(2)))
+
+        if print_choices :
+            print(f"FFT : n={n}, len(data)={self.N}")
+
+        # FFT avec 0 padding sur n
+        yf = spf.rfft(self.data,n)
+        xf = spf.rfftfreq(n,1/self.fs)
+        return FFT_signal(  data = yf,
+                            fs = 1/(xf[1]-xf[0]),
+                            unit = '',
+                            name = f"{self.name} FFT",
+                            f0 = 0,
+                            nb_zero = n - self.N,
+                            window = None)
 
 
 
@@ -447,7 +522,7 @@ class F_signal:
         self.std = self.SIG.std
         self.max = self.SIG.max
         self.min = self.SIG.min
-        self.val_at_nearest_t = self.SIG.val_at_nearest_t
+        self.val_at_nearest_f = self.SIG.val_at_nearest_t
 
         self.f_at_max = self.SIG.t_at_max
         self.f_at_min = self.SIG.t_at_min
@@ -461,7 +536,7 @@ class F_signal:
         self.plot_ADD_f_at_min = self.SIG.plot_ADD_t_at_min
         self.plot_ADD_f = self.SIG.plot_ADD_t #TODO implement it
         self.plot_ADD_frequences = self.SIG.plot_ADD_times
-        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box_on_recut
+        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box
         self.plot_ADD_mean = self.SIG.mean
         self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
         self.plot_ADD_values = self.SIG.plot_ADD_values
@@ -546,7 +621,6 @@ class FFT_signal :
         - `phase_f_at_max`
         - `phase_f_at_min`
         - `phase_f_at`
-    - ``
 
     Who return an Array :
     - `modul_f_at`
@@ -562,13 +636,13 @@ class FFT_signal :
         - `plot_ADD_box_on_recut`
 
     - On plot_modul
-        - `plot_ADDmodul_box_on_recut`
-        - `plot_ADDmodul_freqs`
-        - `plot_ADDmodul_moduls`
+        - `plotM_ADD_box`
+        - `plotM_ADD_freqs`
+        - `plotM_ADD_moduls`
     - On plot_phase
-        - `plot_ADDphase_box_on_recut`
-        - `plot_ADDphase_freqs`
-        - `plot_ADDphase_phases`
+        - `plotP_ADD_box`
+        - `plotP_ADD_freqs`
+        - `plotP_ADD_phases`
 
     Who return a T_signal :
     - `ifft`
@@ -640,19 +714,21 @@ class FFT_signal :
                                 name = f"{self.name} (FFT_phase)")
 
     def __init_functions(self):
-        self.plot_modul = self.Modul.plot
-        self.plot_ADDmodul_box_on_recut = self.Modul.plot_ADD_box_on_recut
-        self.plot_ADDmodul_freqs = self.Modul.plot_ADD_freqs
-        self.plot_ADDmodul_moduls = self.Modul.plot_ADD_moduls
-        self.plot_ADDmodul_f_at_max = self.Modul.plot_ADD_f_at_max
-        self.plot_ADDmodul_f_at_min = self.Modul.plot_ADD_f_at_min
 
-        self.plot_phase = self.Phase.plot
-        self.plot_ADDphase_box_on_recut = self.Phase.plot_ADD_box_on_recut
-        self.plot_ADDphase_freqs = self.Phase.plot_ADD_freqs
-        self.plot_ADDphase_phases = self.Phase.plot_ADD_phases
-        self.plot_ADDphase_f_at_max = self.Phase.plot_ADD_f_at_max
-        self.plot_ADDphase_f_at_min = self.Phase.plot_ADD_f_at_min
+        self.plotM = self.Modul.plot
+        self.plotM_ADD_box = self.Modul.plot_ADD_box_on_recut
+        self.plotM_ADD_f = self.Modul.plot_ADD_f
+        
+        self.plotM_ADD_val = self.Modul.plot_ADD_val
+        self.plotM_ADD_f_at_max = self.Modul.plot_ADD_f_at_max
+        self.plotM_ADD_f_at_min = self.Modul.plot_ADD_f_at_min
+
+        self.plotP = self.Phase.plot
+        self.plotP_ADD_box = self.Phase.plot_ADD_box_on_recut
+        self.plotP_ADD_f = self.Phase.plot_ADD_f
+        self.plotP_ADD_phases = self.Phase.plot_ADD_val
+        self.plotP_ADD_f_at_max = self.Phase.plot_ADD_f_at_max
+        self.plotP_ADD_f_at_min = self.Phase.plot_ADD_f_at_min
             
         self.modul_at_nearest_f = self.Modul.val_at_nearest_f
         self.modul_max = self.Modul.max
@@ -688,8 +764,20 @@ class FFT_signal :
         self.Phase.plot(new_figure=False,**kwargs)
         plt.subplots_adjust(hspace=hspace)
 
-    def plot_ADD_freqs(self):pass
-    def plot_ADD_box_on_recut(self):pass
+    def plot_ADD_freq(self):
+        #TODO test it
+        plt.subplot(211)
+        self.plotM_ADD_f
+        plt.subplot(212)
+        self.plotP_ADD_f
+
+
+    def plot_ADD_box(self):
+        #TODO test it
+        plt.subplot(211)
+        self.plotM_ADD_box
+        plt.subplot(212)
+        self.plotP_ADD_box
 
     def copy(self):
         return FFT_signal(  data = self.data.copy(),
@@ -699,6 +787,7 @@ class FFT_signal :
                             f0 = self.f0)
 
     def empty_copy(self): 
+        """Warning : This function conserve the f0 value"""
         return FFT_signal(  data = None,
                             fs = self.fs,
                             unit = self.unit,
@@ -856,3 +945,42 @@ class Filter :
 
             res.append(sig_f)
         return res
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # def plot_ADD_times(self, l_times:list|np.ndarray, **kwargs):
+    #     yh = self.max()
+    #     yl = self.min()
+    #     e = yh-yl
+    #     yh += e * 0.1 # to set the upper margin
+    #     yl -= e * 0.1 # to set the lower margin
+        
+    #     for time in l_times :
+    #         X = [time]*2
+    #         Y = [yl,yh]
+    #         plt.plot(X,Y,'--',label=f"t={time}s",**kwargs)
+
+    
+
+    # def plot_ADD_values(self,   l_values:list[float],
+    #                             l_labels:list[str]=None,
+    #                             l_colors:list[str]=None,
+    #                             **kwargs):
+    #     X = [self.t_max(), self.t_min()]
+    #     if l_labels is None : l_labels = [None]*len(l_values)
+    #     if l_colors is None : l_colors = [None]*len(l_values)
+
+    #     for value,label,color in zip(l_values,l_labels,l_colors):
+    #         Y = [value]*2
+    #         plt.plot(X,Y,'--',label=label,color=color,**kwargs)
