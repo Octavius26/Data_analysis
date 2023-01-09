@@ -29,7 +29,7 @@ from scipy.interpolate import interp1d
 
 
 
-class C_Signal :
+class C_signal :
     """
     Who return an amplitude value
     - `mean`
@@ -103,7 +103,6 @@ class C_Signal :
         self.unit = unit
         self.name = name
         self.t0 = t0
-        if self.data is not None : self.N = len(self.data)
 
     def mean(self)->float : return np.mean(self.data)
     def std(self)-> float : return np.std(self.data)
@@ -118,8 +117,8 @@ class C_Signal :
     def t_min(self)-> float : return self.t0
 
     @property
-    def N(self): return len(self.data)
-
+    def N(self): return 0 if self.data is None else len(self.data)
+        
     def plot(   self,
                 new_unit : tuple[str,float] = None,
                 add_to_title='',
@@ -209,10 +208,10 @@ class C_Signal :
         `t2` : float (optional)
             End of the recuted signal, use None to keep the signal until the end
         """
-        if t1 < self.t_min : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min
-        if self.t_max < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max
+        if t1 < self.t_min() : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min
+        if self.t_max() < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max
 
-        if t2 is None : t2 = self.t_max
+        if t2 is None : t2 = self.t_max()
         i1,i2 = self.index_at(t1), self.index_at(t2)
         rep = self.empty_copy()
         rep.data = self.data[i1:i2]
@@ -221,18 +220,18 @@ class C_Signal :
 
     def empty_copy(self):
         """Copy everything exept data (including t0)"""
-        return T_Signal(data = None,
+        return T_signal(data = None,
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name,
-                        t0 = self.t_min)
+                        t0 = self.t_min())
 
     def copy(self):
-        return T_Signal(data = self.data.copy(),
+        return T_signal(data = self.data.copy(),
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name,
-                        t0 = self.t_min)
+                        t0 = self.t_min())
 
     def fft(self,   n: int=None,
                     n_factor: float=None,
@@ -280,6 +279,32 @@ class C_Signal :
                             f0 = 0,
                             nb_zero = n - self.N,
                             window = None)
+
+    def __add__(self,val):
+        if isinstance(val, (float, int)):
+            
+            self.data += val
+            self.name += f" + {val}"
+
+        elif isinstance(val,C_signal) :
+            self.data += val.data
+            self.name = f"({self.name} + {val.name})"
+        
+        else : 
+            raise NotImplementedError(f"You sum C_signal and {type(val)} objects")
+
+    __radd__ = __add__
+
+    def __mul__(self,val):
+        if isinstance(val,(int,float)):
+            self.data *= val
+            self.name += f" * {val}"
+
+        if isinstance(val,C_signal):
+            self.data *= val.data
+            self.name += f" * {val.name}"
+
+    __rmul__ = __mul__
 
 
 class T_signal:
@@ -330,7 +355,7 @@ class T_signal:
                     name : str = '',
                     t0 : float = 0): #TODO make it fonctional ?
         
-        self.SIG = C_Signal(data=data,
+        self.SIG = C_signal(data=data,
                             fs=fs,
                             unit=unit,
                             name=name,
@@ -350,14 +375,12 @@ class T_signal:
 
         self.plot = self.SIG.plot
 
-        self.plot_ADD_t_at_max = self.SIG.plot_ADD_t_at_max
         self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
-        self.plot_ADD_t = self.SIG.plot_ADD_t #TODO implement it
-        self.plot_ADD_times = self.SIG.plot_ADD_times
+        # self.plot_ADD_times = self.SIG.plot_ADD_times
         self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box
         self.plot_ADD_mean = self.SIG.mean
         self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
-        self.plot_ADD_values = self.SIG.plot_ADD_values
+        # self.plot_ADD_values = self.SIG.plot_ADD_values
 
         self.recut = self.SIG.recut
 
@@ -368,7 +391,17 @@ class T_signal:
         
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
+
+    def __add__(self,val):
+        if isinstance(val,(float,int)):
+            self.SIG.__add__(val)
+        elif isinstance(val,T_signal):
+            self.SIG += val.SIG
+        else : 
+            raise NotImplementedError(f"You sum T_signal and {type(val)} objects")
         
+
+    __radd__ = __add__
 
     @property
     def data(self): return self.SIG.data
@@ -512,7 +545,7 @@ class F_signal:
         `name` : name of the signal
         """
         
-        self.SIG = C_Signal(data=data,
+        self.SIG = C_signal(data=data,
                             fs=fs,
                             unit=unit,
                             name=name,
@@ -532,14 +565,14 @@ class F_signal:
 
         self.plot = self.SIG.plot
 
-        self.plot_ADD_f_at_max = self.SIG.plot_ADD_t_at_max
+        # self.plot_ADD_f_at_max = self.SIG.plot_ADD_t_at_max
         self.plot_ADD_f_at_min = self.SIG.plot_ADD_t_at_min
-        self.plot_ADD_f = self.SIG.plot_ADD_t #TODO implement it
-        self.plot_ADD_frequences = self.SIG.plot_ADD_times
+        # self.plot_ADD_f = self.SIG.plot_ADD_t #TODO implement it
+        # self.plot_ADD_frequences = self.SIG.plot_ADD_times
         self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box
         self.plot_ADD_mean = self.SIG.mean
         self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
-        self.plot_ADD_values = self.SIG.plot_ADD_values
+        # self.plot_ADD_values = self.SIG.plot_ADD_values
 
         self.recut = self.SIG.recut
 
@@ -551,7 +584,26 @@ class F_signal:
         
     
 
+    def plot_ADD_f(self,f:float,**kwargs):
+        """ Plot a vertical line
 
+        Args 
+        -----
+        `t`: float
+            time value for the vertical line
+        """
+        yh = self.max()
+        yl = self.min()
+        e = yh-yl
+        yh += e * 0.1 # to set the upper margin
+        yl -= e * 0.1 # to set the lower margin
+        
+        X = [f]*2
+        Y = [yl,yh]
+        plt.plot(X,Y,'--',label=f"t={f}s",**kwargs)
+
+    def plot_ADD_f_at_max(self):
+        self.plot_ADD_f(self.f_max())
 
 
 
@@ -795,8 +847,7 @@ class FFT_signal :
                             f0 = self.f0)
 
     @property
-    def N(self): return len(self.data)
-
+    def N(self): return 0 if self.data is None else len(self.data)
 
 
 
@@ -856,7 +907,7 @@ class f_sig :
         f_sig.init_ok = True
 
 
-    def f_current(sig_V : T_Signal,num : int):
+    def f_current(sig_V : T_signal,num : int):
         '''
         Cette fonction convertie la tension lue par l'ADC en courant traversant le fil
 
@@ -872,7 +923,7 @@ class f_sig :
         if sig_V.unit not in ['V','v','Volts','volts'] : 
             print("Attention l'unité de sig_V.unit est peut-être fausse") 
 
-        sig_I = T_Signal(data=None, fs=sig_V.fs, unit='A', name=f"U_I{num} converted to I{num}")
+        sig_I = T_signal(data=None, fs=sig_V.fs, unit='A', name=f"U_I{num} converted to I{num}")
         match num :
             case 1 :
                 sig_I.data = f_sig.f_I1(sig_V.data)
@@ -909,15 +960,15 @@ def bar_graph(l_y,l_label,l_ticks,l_color=None,close=True):
 
 
 class Filter :    
-    def FIR(            signal : T_Signal | list[T_Signal],
+    def FIR(            signal : T_signal | list[T_signal],
                         order : int,
                         cutoff : float | list[float],
                         window : str = 'hamming',
-                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> T_Signal | list[T_Signal]:
+                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> T_signal | list[T_signal]:
         if order == 0:
             return signal
 
-        if type(signal) == T_Signal : 
+        if type(signal) == T_signal : 
             if type_filtre == 'low_pass':
                 pass_zero = True 
             elif type_filtre == 'high_pass':
@@ -931,7 +982,7 @@ class Filter :
                 pass_zero = pass_zero,
                 fs = signal.fs)
             y = filtfilt(num_coef, 1, signal.data)
-            signal_f = T_Signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
+            signal_f = T_signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
             return signal_f
         
         res = []
