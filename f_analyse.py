@@ -12,7 +12,7 @@
 # from f_analyse import * 
 
 
-
+from __future__ import annotations
 
 
 from warnings import warn
@@ -208,10 +208,11 @@ class C_signal :
         `t2` : float (optional)
             End of the recuted signal, use None to keep the signal until the end
         """
+        if t2 is None : t2 = self.t_max()
+
         if t1 < self.t_min() : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min
         if self.t_max() < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max
 
-        if t2 is None : t2 = self.t_max()
         i1,i2 = self.index_at(t1), self.index_at(t2)
         rep = self.empty_copy()
         rep.data = self.data[i1:i2]
@@ -220,14 +221,14 @@ class C_signal :
 
     def empty_copy(self):
         """Copy everything exept data (including t0)"""
-        return T_signal(data = None,
+        return C_signal(data = None,
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name,
                         t0 = self.t_min())
 
     def copy(self):
-        return T_signal(data = self.data.copy(),
+        return C_signal(data = self.data.copy(),
                         fs = self.fs,
                         unit = self.unit,
                         name = self.name,
@@ -280,31 +281,94 @@ class C_signal :
                             nb_zero = n - self.N,
                             window = None)
 
+    def fill_like(sig1:C_signal,sig2:C_signal,infos=True):
+        #TODO Make it work !!!
+        """
+        Make to signals compatible in terms of t0 and duration
+        
+        Args
+        -----
+        `sig1` : C_signal
+        `sig2` : C_signal
+
+        Return
+        -----
+        `sig1_` : C_signal
+            (a copy of sig1)
+        `sig2_` : C_signal
+            (a copy of sig2)
+        """
+
+        if sig1.fs != sig2.fs : 
+            raise ValueError("fill_like with differents fs")
+        
+        sig1__ = sig1.copy()
+        sig2__ = sig2.copy()
+
+        N_diff_A = (sig1__.t0 - sig2__.t0) / sig1__.fs
+        N_diff_B = sig1__.N - sig2__.N
+
+        if N_diff_A > 0 :
+            np.pad(sig2__.data,(N_diff_A,0))
+            sig2__.t0 = sig1__.t0
+            if infos : print("fill due to different t0")
+        elif N_diff_A < 0 :
+            np.pad(sig1__.data,(-N_diff_A,0))
+            sig1__.t0 = sig2__.t0
+            if infos : print("fill due to different t0")
+
+        if N_diff_B > 0 :
+            np.pad(sig2__.data,(0,N_diff_B))
+            if infos : print("fill due to different duration")
+        elif N_diff_B < 0 :
+            np.pad(sig1__.data,(0,-N_diff_B))
+            if infos : print("fill due to different duration")
+
+        return sig1__ , sig2__
+
+
     def __add__(self,val):
         if isinstance(val, (float, int)):
-            
-            self.data += val
-            self.name += f" + {val}"
+            new_sig = self.copy()
+            new_sig.data += val
+            new_sig.name += f" + {val}"
 
         elif isinstance(val,C_signal) :
-            self.data += val.data
-            self.name = f"({self.name} + {val.name})"
-        
-        else : 
-            raise NotImplementedError(f"You sum C_signal and {type(val)} objects")
+            print("type debug",type(val))
+            print("type debug",type(self))
+            if self.fs != val.fs :
+                raise NotImplementedError("Sum with differents fs")
+            
+            new_sig,sig2 = C_signal.fill_like(self,val)
+
+            new_sig.data += sig2.data
+            new_sig.name = f"({new_sig.name} + {sig2.name})"
+
+        else : raise NotImplementedError(f"You sum C_signal and {type(val)} objects")
+        return new_sig
 
     __radd__ = __add__
 
     def __mul__(self,val):
         if isinstance(val,(int,float)):
-            self.data *= val
-            self.name += f" * {val}"
+            new_sig = self.copy()
+            new_sig.data *= val
+            new_sig.name += f" * {val}"
 
-        if isinstance(val,C_signal):
-            self.data *= val.data
-            self.name += f" * {val.name}"
+
+        elif isinstance(val,C_signal):
+            new_sig = self.copy()
+            new_sig.data *= val.data
+            new_sig.name += f" * {val.name}"
+
+        else : raise NotImplementedError(f"You multiply C_signal and {type(val)} objects")
+        return new_sig
 
     __rmul__ = __mul__
+
+
+
+
 
 
 class T_signal:
@@ -353,13 +417,28 @@ class T_signal:
                     fs : float = 1,
                     unit : str = '',
                     name : str = '',
-                    t0 : float = 0): #TODO make it fonctional ?
-        
-        self.SIG = C_signal(data=data,
-                            fs=fs,
-                            unit=unit,
-                            name=name,
-                            t0=t0)
+                    t0 : float = 0, #TODO make it fonctional ?
+                    from_sig : C_signal = None):
+        """
+        Args
+        ----
+        `data`: array | list
+            time value for the vertical line
+        fs : float (default = 1)
+            Sampling frequency
+        unit : str (default = '')
+        name : str (default = '')
+        t0 : float (default = 0)        
+        """
+        if from_sig is None: 
+            self.SIG = C_signal(data=data,
+                                fs=fs,
+                                unit=unit,
+                                name=name,
+                                t0=t0)
+
+        else: 
+            self.SIG = from_sig
 
         self.mean = self.SIG.mean
         self.std = self.SIG.std
@@ -377,28 +456,42 @@ class T_signal:
 
         self.plot_ADD_t_at_min = self.SIG.plot_ADD_t_at_min
         # self.plot_ADD_times = self.SIG.plot_ADD_times
-        self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box
+        self.plot_ADD_box = self.SIG.plot_ADD_box
         self.plot_ADD_mean = self.SIG.mean
         self.plot_ADD_val = self.SIG.plot_ADD_val #TODO implement it
         # self.plot_ADD_values = self.SIG.plot_ADD_values
 
-        self.recut = self.SIG.recut
 
-        self.copy = self.SIG.copy
-        self.empty_copy = self.SIG.empty_copy
+        # TODO to replace : we need to retun a T_signal
+        # self.copy = self.SIG.copy
+        # self.empty_copy = self.SIG.empty_copy
 
         self.fft = self.SIG.fft
-        
+
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
 
+    def recut(self,t1: float=0,t2: float=None) :
+        """
+        Args
+        -----
+        `t1` : float
+            Beginning of the recuted signal
+        `t2` : float (optional)
+            End of the recuted signal, use None to keep the signal until the end
+        """
+        return T_signal(from_sig = self.SIG.recut(t1=t1,t2=t2))
+        
+
     def __add__(self,val):
         if isinstance(val,(float,int)):
-            self.SIG.__add__(val)
+            print("verifier le type") # TODO 
+            return self.SIG + val
         elif isinstance(val,T_signal):
-            self.SIG += val.SIG
-        else : 
-            raise NotImplementedError(f"You sum T_signal and {type(val)} objects")
+            # TODO ajouter un test de l'unité utilisée
+            print("verifier le type") # TODO 
+            return self.SIG + val.SIG
+        else : raise NotImplementedError(f"You sum T_signal and {type(val)} objects")
         
 
     __radd__ = __add__
@@ -576,8 +669,9 @@ class F_signal:
 
         self.recut = self.SIG.recut
 
-        self.copy = self.SIG.copy
-        self.empty_copy = self.SIG.empty_copy
+        # TODO to replace : we need to retun a F_signal
+        # self.copy = self.SIG.copy
+        # self.empty_copy = self.SIG.empty_copy
         
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
