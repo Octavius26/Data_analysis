@@ -306,22 +306,23 @@ class C_signal :
         sig2__ = sig2.copy()
 
         N_diff_A = (sig1__.t0 - sig2__.t0) / sig1__.fs
-        N_diff_B = sig1__.N - sig2__.N
 
         if N_diff_A > 0 :
-            np.pad(sig2__.data,(N_diff_A,0))
+            sig2__.data = np.pad(sig2__.data,(N_diff_A,0))
             sig2__.t0 = sig1__.t0
             if infos : print("fill due to different t0")
         elif N_diff_A < 0 :
-            np.pad(sig1__.data,(-N_diff_A,0))
+            sig1__.data = np.pad(sig1__.data,(-N_diff_A,0))
             sig1__.t0 = sig2__.t0
             if infos : print("fill due to different t0")
 
-        if N_diff_B > 0 :
-            np.pad(sig2__.data,(0,N_diff_B))
+        N_diff_B = sig1__.N - sig2__.N
+
+        if N_diff_B > 0 : 
+            sig2__.data = np.pad(sig2__.data,(0,N_diff_B))
             if infos : print("fill due to different duration")
         elif N_diff_B < 0 :
-            np.pad(sig1__.data,(0,-N_diff_B))
+            sig1__.data = np.pad(sig1__.data,(0,-N_diff_B))
             if infos : print("fill due to different duration")
 
         return sig1__ , sig2__
