@@ -305,15 +305,17 @@ class C_signal :
         sig1__ = sig1.copy()
         sig2__ = sig2.copy()
 
-        N_diff_A = (sig1__.t0 - sig2__.t0) / sig1__.fs
+        N_diff_A = (sig1__.t0 - sig2__.t0) * sig1__.fs
 
         if N_diff_A > 0 :
-            sig2__.data = np.pad(sig2__.data,(N_diff_A,0))
-            sig2__.t0 = sig1__.t0
+            # sig2__.t0 < sig1__.t0
+            sig1__.data = np.pad(sig1__.data,(N_diff_A,0))
+            sig1__.t0 = sig2__.t0
             if infos : print("fill due to different t0")
         elif N_diff_A < 0 :
-            sig1__.data = np.pad(sig1__.data,(-N_diff_A,0))
-            sig1__.t0 = sig2__.t0
+            # sig1__.t0 < sig2__.t0
+            sig2__.data = np.pad(sig2__.data,(-N_diff_A,0))
+            sig2__.t0 = sig1__.t0
             if infos : print("fill due to different t0")
 
         N_diff_B = sig1__.N - sig2__.N
@@ -335,8 +337,6 @@ class C_signal :
             new_sig.name += f" + {val}"
 
         elif isinstance(val,C_signal) :
-            print("type debug",type(val))
-            print("type debug",type(self))
             if self.fs != val.fs :
                 raise NotImplementedError("Sum with differents fs")
             
@@ -358,9 +358,13 @@ class C_signal :
 
 
         elif isinstance(val,C_signal):
-            new_sig = self.copy()
-            new_sig.data *= val.data
-            new_sig.name += f" * {val.name}"
+            if self.fs != val.fs :
+                raise NotImplementedError("operation with differents fs")
+            new_sig,sig2 = C_signal.fill_like(self,val)
+            
+
+            new_sig.data *= sig2.data
+            new_sig.name += f" * {sig2.name}"
 
         else : raise NotImplementedError(f"You multiply C_signal and {type(val)} objects")
         return new_sig
@@ -369,9 +373,45 @@ class C_signal :
 
 
 
+    def __truediv__(self,val):
+        if isinstance(val,(int,float)):
+            new_sig = self.copy()
+            new_sig.data /= val
+            new_sig.name += f" / {val}"
 
 
+        elif isinstance(val,C_signal):
+            if self.fs != val.fs :
+                raise NotImplementedError("operation with differents fs")
+            new_sig,sig2 = C_signal.fill_like(self,val)
+            
 
+            new_sig.data /= sig2.data
+            new_sig.name += f" / {sig2.name}"
+
+        else : raise NotImplementedError(f"You divide C_signal and {type(val)} objects")
+        return new_sig
+    
+    def __rtruediv__(self,val):
+        if isinstance(val,(int,float)):
+            new_sig = self.copy()
+            val /= new_sig.data
+            new_sig.name = f"{val} / {new_sig.name}"
+
+
+        elif isinstance(val,C_signal):
+            if self.fs != val.fs :
+                raise NotImplementedError("operation with differents fs")
+            new_sig,sig2 = C_signal.fill_like(self,val)
+            
+
+            sig2.data /= new_sig.data
+            new_sig.name = f"{sig2.name} / {new_sig.name}"
+
+        else : raise NotImplementedError(f"You divide {type(val)} and C_signal objects")
+        return new_sig
+    
+    
 class T_signal:
     """
     Who return an amplitude value
@@ -483,6 +523,11 @@ class T_signal:
         """
         return T_signal(from_sig = self.SIG.recut(t1=t1,t2=t2))
         
+    def copy(self):
+        return T_signal(from_sig=self.SIG.copy())
+    
+    def empty_copy(self):
+        return T_signal(from_sig=self.SIG.empty_copy())
 
     def __add__(self,val):
         if isinstance(val,(float,int)):
@@ -496,6 +541,33 @@ class T_signal:
         
 
     __radd__ = __add__
+
+
+    def __mul__(self,val):
+        if isinstance(val,(float,int)):
+            print("verifier le type") # TODO 
+            return self.SIG * val
+        elif isinstance(val,T_signal):
+            # TODO ajouter un test de l'unité utilisée
+            print("verifier le type") # TODO 
+            return self.SIG * val.SIG
+        else : raise NotImplementedError(f"You can't multiply T_signal and {type(val)} objects")
+
+    __rmul__ = __mul__
+
+    def __truediv__(self, val):
+        if isinstance(val,(int,float)):
+            return self.SIG / val
+        elif isinstance(val,T_signal):
+            return self.SIG / val.SIG
+        else : raise NotImplementedError(f"You can't divide T_signal and {type(val)} objects")
+
+    def __rtruediv__(self,val):
+        if isinstance(val,(int,float)):
+            return val / self.SIG
+        elif isinstance(val,T_signal):
+            return val.SIG / self.SIG 
+        else : raise NotImplementedError(f"You can't divide {type(val)} and T_signal objects")
 
     @property
     def data(self): return self.SIG.data
