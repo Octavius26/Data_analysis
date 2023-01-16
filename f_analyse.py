@@ -345,7 +345,7 @@ class C_signal :
             new_sig.data += sig2.data
             new_sig.name = f"({new_sig.name} + {sig2.name})"
 
-        else : raise NotImplementedError(f"You sum C_signal and {type(val)} objects")
+        else : raise NotImplementedError(f"You cannot sum C_signal and {type(val)} objects")
         return new_sig
 
     __radd__ = __add__
@@ -366,7 +366,7 @@ class C_signal :
             new_sig.data *= sig2.data
             new_sig.name += f" * {sig2.name}"
 
-        else : raise NotImplementedError(f"You multiply C_signal and {type(val)} objects")
+        else : raise NotImplementedError(f"You cannot multiply C_signal and {type(val)} objects")
         return new_sig
 
     __rmul__ = __mul__
@@ -389,13 +389,13 @@ class C_signal :
             new_sig.data /= sig2.data
             new_sig.name += f" / {sig2.name}"
 
-        else : raise NotImplementedError(f"You divide C_signal and {type(val)} objects")
+        else : raise NotImplementedError(f"You cannot divide C_signal and {type(val)} objects")
         return new_sig
     
     def __rtruediv__(self,val):
         if isinstance(val,(int,float)):
             new_sig = self.copy()
-            val /= new_sig.data
+            new_sig.data = val / new_sig.data
             new_sig.name = f"{val} / {new_sig.name}"
 
 
@@ -408,9 +408,65 @@ class C_signal :
             sig2.data /= new_sig.data
             new_sig.name = f"{sig2.name} / {new_sig.name}"
 
-        else : raise NotImplementedError(f"You divide {type(val)} and C_signal objects")
+        else : raise NotImplementedError(f"You cannot divide {type(val)} and C_signal objects")
         return new_sig
     
+    def __sub__(self,val):
+        if isinstance(val, (float, int)):
+            new_sig = self.copy()
+            new_sig.data -= val
+            new_sig.name += f" - {val}"
+
+        elif isinstance(val,C_signal) :
+            if self.fs != val.fs :
+                raise NotImplementedError("operation with differents fs")
+            
+            new_sig,sig2 = C_signal.fill_like(self,val)
+
+            new_sig.data += sig2.data
+            new_sig.name = f"({new_sig.name} - {sig2.name})"
+
+        else : raise NotImplementedError(f"You cannot substract C_signal and {type(val)} objects")
+        return new_sig
+    
+    def __rsub__(self,val):
+        if isinstance(val, (float, int)):
+            new_sig = self.empty_copy()
+            new_sig.data = val - self.data 
+            new_sig.name = f"{val} - {self.name}"
+
+        elif isinstance(val,C_signal) :
+            if self.fs != val.fs :
+                raise NotImplementedError("operation with differents fs")
+            
+            new_sig,sig2 = C_signal.fill_like(self,val)
+
+            sig2.data -= new_sig.data
+            new_sig.name = f"({sig2.name} - {new_sig.name})"
+
+        else : raise NotImplementedError(f"You cannot substract C_signal and {type(val)} objects")
+        return new_sig
+
+    def __neg__(self):
+        new_sig = self.copy()
+        new_sig.data.__mul__ *= -1
+        new_sig.name = f"- {self.name}"
+        return new_sig
+
+
+
+
+    def resample(self,new_fs:float,fs_factor:float=None):
+        """
+        Args
+        -----
+        
+        `new_fs` : float
+        `fs_factor` : float
+            if not None, `new_fs` = `fs` * `fs_factor`
+        """
+        # TODO to implement
+        raise NotImplementedError()
     
 class T_signal:
     """
@@ -569,6 +625,23 @@ class T_signal:
             return val.SIG / self.SIG 
         else : raise NotImplementedError(f"You can't divide {type(val)} and T_signal objects")
 
+
+
+    def __rsub__(self,val):
+        if isinstance(val,(int,float)):
+            return val - self.SIG
+        elif isinstance(val,T_signal):
+            return val.SIG - self.SIG 
+        else : raise NotImplementedError(f"You can't substract {type(val)} and T_signal objects")
+
+    def __sub__(self,val):
+        if isinstance(val,(int,float)):
+            return self.SIG - val
+        elif isinstance(val,T_signal):
+            return self.SIG - val.SIG
+        else : raise NotImplementedError(f"You can't substract {type(val)} and T_signal objects")
+
+
     @property
     def data(self): return self.SIG.data
     @data.setter
@@ -583,6 +656,7 @@ class T_signal:
     def t0(self): return self.SIG.t0
     @t0.setter
     def t0(self,new_t0): self.SIG.t0 = new_t0
+
     def plot_ADD_t(self,t:float,**kwargs):
         """ Plot a vertical line
 
@@ -729,10 +803,10 @@ class F_signal:
         self.f_max = self.SIG.t_max
         self.f_min = self.SIG.t_min
 
-        self.plot = self.SIG.plot
+        # self.plot = self.SIG.plot
 
         # self.plot_ADD_f_at_max = self.SIG.plot_ADD_t_at_max
-        self.plot_ADD_f_at_min = self.SIG.plot_ADD_t_at_min
+        # self.plot_ADD_f_at_min = self.SIG.plot_ADD_t_at_min
         # self.plot_ADD_f = self.SIG.plot_ADD_t #TODO implement it
         # self.plot_ADD_frequences = self.SIG.plot_ADD_times
         self.plot_ADD_box_on_recut = self.SIG.plot_ADD_box
@@ -749,7 +823,29 @@ class F_signal:
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
         
-    
+    def plot(   self,
+                new_unit : tuple[str,float] = None,
+                add_to_title='',
+                new_figure = True,
+                **kwargs):
+
+        # TODO create a unit class ?
+        
+        if new_figure : plt.figure()
+        unit = self.unit 
+        data = self.data
+        if new_unit is not None :
+            unit = new_unit[0]
+            data = data*new_unit[1]
+
+        plt.grid(True)
+        N = len(data)
+        X=np.linspace(start=self.f_min() , stop=self.f_max(), num=N)
+        plt.plot(X, data,label = f"{self.name}",**kwargs)
+        plt.xlabel("frequency (Hz)")
+        if unit is None : plt.ylabel('Amplitude')
+        else : plt.ylabel(f"Amplitude ({unit})")
+        plt.title(f"{self.name} {add_to_title}")
 
     def plot_ADD_f(self,f:float,**kwargs):
         """ Plot a vertical line
@@ -767,13 +863,29 @@ class F_signal:
         
         X = [f]*2
         Y = [yl,yh]
-        plt.plot(X,Y,'--',label=f"t={f}s",**kwargs)
+        plt.plot(X,Y,'--',label=f"f={f}Hz",**kwargs)
 
     def plot_ADD_f_at_max(self):
-        self.plot_ADD_f(self.f_max())
+        self.plot_ADD_f(self.f_at_max())
+
+    def plot_ADD_f_at_min(self):
+        self.plot_ADD_f(self.f_at_min())
 
 
+    @property
+    def data(self): return self.SIG.data
+    @data.setter
+    def data(self,new_data): self.SIG.data = new_data
 
+    @property
+    def unit(self): return self.SIG.unit
+    @unit.setter
+    def unit(self,new_unit): self.SIG.unit = new_unit
+
+    @property
+    def name(self): return self.SIG.name
+    @name.setter
+    def name(self,new_name): self.SIG.name = new_name
 
 
 
