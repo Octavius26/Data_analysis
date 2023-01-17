@@ -657,6 +657,11 @@ class T_signal:
     @t0.setter
     def t0(self,new_t0): self.SIG.t0 = new_t0
 
+    @property
+    def fs(self): return self.SIG.fs
+    @t0.setter
+    def fs(self,new_fs): self.SIG.fs = new_fs
+
     def plot_ADD_t(self,t:float,**kwargs):
         """ Plot a vertical line
 
@@ -895,27 +900,6 @@ class F_signal:
 
 
 
-# class FFT_modul:
-#     def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
-#         super().__init__(data, fs, unit, name, f0)
-
-#     def plot_ADD_moduls(self, l_modul: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
-#         return super().plot_ADD_values(l_modul, l_labels, l_colors, **kwargs)
-
-
-
-
-
-
-# class FFT_phase(F_signal):
-#     def __init__(self, data: np.ndarray | list = None, fs: float = 1, unit: str = '', name: str = '', f0=0):
-#         super().__init__(data, fs, unit, name, f0)
-
-#     def plot_ADD_phases(self, l_phases: list[float], l_labels: list[str] = None, l_colors: list[str] = None, **kwargs):
-#         return super().plot_ADD_values(l_phases, l_labels, l_colors, **kwargs)
-
-
-
 
 
 
@@ -1077,7 +1061,7 @@ class FFT_signal :
 
 
 
-    def f_range(self)-> float : return self.N/self.fs
+    def f_max(self)-> float : return self.N/self.fs
 
     def plot(self,new_figure=True,figsize : tuple[int] =None,hspace=1,**kwargs):
         """
@@ -1129,6 +1113,14 @@ class FFT_signal :
     def N(self): return 0 if self.data is None else len(self.data)
 
 
+    def ifft(self)-> T_signal:
+        t_data = spf.irfft(self.data)
+        new_sig = T_signal( data = t_data,
+                            fs = self.f_max() / 2, #TODO change it
+                            unit = '?',
+                            name = f"{self.name}_from_FFT",
+                            t0 = 0)
+        return new_sig
 
 
 
@@ -1137,8 +1129,52 @@ class FFT_signal :
 
 
 
+#   def fft(self,   n: int=None,
+#                     n_factor: float=None,
+#                     choose_next_power_of_2 = True,
+#                     print_choices = False,
+#                     **kwargs):
+#         """
+#         Args 
+#         -----
+#         `n`: int (default = len of the data)
+#             number of point used to compute the fft (must be greater than the number of point in the signal)
+#         `n_factor` : float (optional)
+#             If not None, `n`=len(data)*`n_factor`
+#         `choose_next_power_of_2` : bool (default = True)
+#             If true use the newxt power of 2 istead of `n`
+#         `print_choices` : bool
 
+#         Return
+#         ------
+#         `xf` : Array
+#         `yf_real` : Array
+#         """
+#         # TODO use apodization windows (hamming,...)
 
+#         if n is None : n = self.N
+#         if n_factor is not None : n = int(self.N * n_factor)
+
+#         if n < self.N:
+#             print("n is smaller than self.data, we use n=len(self.data) instead")
+#             n=self.N
+
+#         if choose_next_power_of_2 :
+#             n = int(2**np.ceil(np.log(n) / np.log(2)))
+
+#         if print_choices :
+#             print(f"FFT : n={n}, len(data)={self.N}")
+
+#         # FFT avec 0 padding sur n
+#         yf = spf.rfft(self.data,n)
+#         xf = spf.rfftfreq(n,1/self.fs)
+#         return FFT_signal(  data = yf,
+#                             fs = 1/(xf[1]-xf[0]),
+#                             unit = '',
+#                             name = f"{self.name} FFT",
+#                             f0 = 0,
+#                             nb_zero = n - self.N,
+#                             window = None)
 
 
 
