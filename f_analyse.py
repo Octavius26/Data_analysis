@@ -659,7 +659,7 @@ class T_signal:
 
     @property
     def fs(self): return self.SIG.fs
-    @t0.setter
+    @fs.setter
     def fs(self,new_fs): self.SIG.fs = new_fs
 
     def plot_ADD_t(self,t:float,**kwargs):
@@ -1116,7 +1116,7 @@ class FFT_signal :
     def ifft(self)-> T_signal:
         t_data = spf.irfft(self.data)
         new_sig = T_signal( data = t_data,
-                            fs = self.f_max() / 2, #TODO change it
+                            fs = (self.f_max()-1/self.fs)*2,
                             unit = '?',
                             name = f"{self.name}_from_FFT",
                             t0 = 0)
@@ -1129,127 +1129,11 @@ class FFT_signal :
 
 
 
-#   def fft(self,   n: int=None,
-#                     n_factor: float=None,
-#                     choose_next_power_of_2 = True,
-#                     print_choices = False,
-#                     **kwargs):
-#         """
-#         Args 
-#         -----
-#         `n`: int (default = len of the data)
-#             number of point used to compute the fft (must be greater than the number of point in the signal)
-#         `n_factor` : float (optional)
-#             If not None, `n`=len(data)*`n_factor`
-#         `choose_next_power_of_2` : bool (default = True)
-#             If true use the newxt power of 2 istead of `n`
-#         `print_choices` : bool
-
-#         Return
-#         ------
-#         `xf` : Array
-#         `yf_real` : Array
-#         """
-#         # TODO use apodization windows (hamming,...)
-
-#         if n is None : n = self.N
-#         if n_factor is not None : n = int(self.N * n_factor)
-
-#         if n < self.N:
-#             print("n is smaller than self.data, we use n=len(self.data) instead")
-#             n=self.N
-
-#         if choose_next_power_of_2 :
-#             n = int(2**np.ceil(np.log(n) / np.log(2)))
-
-#         if print_choices :
-#             print(f"FFT : n={n}, len(data)={self.N}")
-
-#         # FFT avec 0 padding sur n
-#         yf = spf.rfft(self.data,n)
-#         xf = spf.rfftfreq(n,1/self.fs)
-#         return FFT_signal(  data = yf,
-#                             fs = 1/(xf[1]-xf[0]),
-#                             unit = '',
-#                             name = f"{self.name} FFT",
-#                             f0 = 0,
-#                             nb_zero = n - self.N,
-#                             window = None)
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class f_sig :
-    f_I1, f_I2, f_I3 = None, None, None
-    init_ok = False
-    def init_f_current():
-        I_mes_1 = np.array([0,19.70, 49.42, 121.86, 163.97, 334.00, 785.80, 1537.30, 2013.60]) * 1e-6
-        I_mes_2 = np.array([0,26.84, 50.10, 100.89, 165.22, 335.85, 788.40, 1536.00, 2015.50]) * 1e-6
-        I_mes_3 = np.array([0,18.67, 45.90, 116.30, 163.44, 335.26, 784.50, 1526.10, 1968.50]) * 1e-6
-        V_ADC_1 = np.array([0,19.02, 33.83, 70.00,  91.10,  176.50, 401.80, 776.40,  1015.00]) * 1e-3
-        V_ADC_2 = np.array([0,22.30, 34.47, 59.83,  92.00,  177.30, 403.35, 777.10,  1019.26]) * 1e-3
-        V_ADC_3 = np.array([0,18.32, 32.10, 67.00,  91.10,  177.19, 401.48, 772.35,  990.93 ]) * 1e-3
-
-        f_sig.f_I1 = interp1d(V_ADC_1,I_mes_1,kind="quadratic")
-        f_sig.f_I2 = interp1d(V_ADC_2,I_mes_2,kind="quadratic")
-        f_sig.f_I3 = interp1d(V_ADC_3,I_mes_3,kind="quadratic")
-        f_sig.init_ok = True
-
-
-    def f_current(sig_V : T_signal,num : int):
-        '''
-        Cette fonction convertie la tension lue par l'ADC en courant traversant le fil
-
-        Args : 
-        ------
-        `sig_V` (en Volts)
-        `num` = le numéro du générateur utilisé
-        Returns :
-        ---------
-        `i` (en Ampères)
-        '''
-        if not f_sig.init_ok : f_sig.init_f_current()
-        if sig_V.unit not in ['V','v','Volts','volts'] : 
-            print("Attention l'unité de sig_V.unit est peut-être fausse") 
-
-        sig_I = T_signal(data=None, fs=sig_V.fs, unit='A', name=f"U_I{num} converted to I{num}")
-        match num :
-            case 1 :
-                sig_I.data = f_sig.f_I1(sig_V.data)
-            case 2 :
-                sig_I.data = f_sig.f_I2(sig_V.data)
-            case 3 :
-                sig_I.data = f_sig.f_I3(sig_V.data)
-            case _ :
-                warn("Le numéro du générateur de courant doit être 1,2 ou 3")
-        return sig_I
-        
 
 
 
