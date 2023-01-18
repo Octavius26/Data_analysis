@@ -1128,73 +1128,41 @@ class FFT_signal :
 
 
 
+# import sk_dsp_comm.fir_design_helper as fir_d
+# import sk_dsp_comm.iir_design_helper as iir_d
+
+# fir_d.firwin_kaiser_lpf()
 
 
+# class Filter:
+
+#     def apply_to(self,sig:T_signal): pass
+#     def plot_Bode(self): pass
+#     def __repr__(self): pass
 
 
+# class FIR(Filter):
+#     num : np.ndarray = None
+
+#     def plot_Bode(self):
+#         print("This function should draw the Bode associated with the FIR filter")
+
+#     def __repr__(self):
+#         return f"FIR filter (num={self.num})"
 
 
-
-
-
-
-
-def bar_graph(l_y,l_label,l_ticks,l_color=None,close=True):
-        if close : plt.close('all')
-        N=len(l_y)
-        N2=len(l_y[0])
-        if l_color is None: l_color=[None]*N
-        barWidth = 1/(N+1)
-
-        for i,(y,label,color) in enumerate(zip(l_y,l_label,l_color)) :
-                x = np.arange(N2) + i*barWidth
-                plt.bar(x,y,label=label,width=barWidth,color=color,edgecolor='black')
-
-        plt.xticks([n + barWidth*(N-1)/2 for n in range(N2)],l_ticks)
-        plt.legend()
-
-
-
-
-
-
-class Filter :    
-    def FIR(            signal : T_signal | list[T_signal],
-                        order : int,
-                        cutoff : float | list[float],
-                        window : str = 'hamming',
-                        type_filtre : Literal['low_pass','high_pass'] = 'low_pass') -> T_signal | list[T_signal]:
-        if order == 0:
-            return signal
-
-        if type(signal) == T_signal : 
-            if type_filtre == 'low_pass':
-                pass_zero = True 
-            elif type_filtre == 'high_pass':
-                pass_zero = False
-
-
-            num_coef = firwin(
-                numtaps = order+1,
-                cutoff = cutoff,
-                window = window,
-                pass_zero = pass_zero,
-                fs = signal.fs)
-            y = filtfilt(num_coef, 1, signal.data)
-            signal_f = T_signal(y, signal.fs, signal.unit, f"{signal.name} - ({window},{order},{cutoff}Hz)")
-            return signal_f
+#     def apply_to(self, sig: T_signal)-> T_signal:
+#         print("Fonction à définir") # TODO
+#         return T_signal()
         
-        res = []
-        for sig in signal :
-            sig_f = Filter.FIR(
-                signal = sig,
-                order = order,
-                cutoff = cutoff,
-                window = window,
-                type_filtre = type_filtre)
 
-            res.append(sig_f)
-        return res
+
+# class Kaiser_LP(FIR):
+#     '''Kaiser Lowpass filter'''
+#     def __init__(self,f_pass,f_stop,d_stop,fs=1,N_bump=0) -> None:
+#         # super().__init__()
+#         self.num = fir_d.
+            
 
 
 
@@ -1209,28 +1177,6 @@ class Filter :
 
 
 
-    # def plot_ADD_times(self, l_times:list|np.ndarray, **kwargs):
-    #     yh = self.max()
-    #     yl = self.min()
-    #     e = yh-yl
-    #     yh += e * 0.1 # to set the upper margin
-    #     yl -= e * 0.1 # to set the lower margin
-        
-    #     for time in l_times :
-    #         X = [time]*2
-    #         Y = [yl,yh]
-    #         plt.plot(X,Y,'--',label=f"t={time}s",**kwargs)
 
-    
 
-    # def plot_ADD_values(self,   l_values:list[float],
-    #                             l_labels:list[str]=None,
-    #                             l_colors:list[str]=None,
-    #                             **kwargs):
-    #     X = [self.t_max(), self.t_min()]
-    #     if l_labels is None : l_labels = [None]*len(l_values)
-    #     if l_colors is None : l_colors = [None]*len(l_values)
 
-    #     for value,label,color in zip(l_values,l_labels,l_colors):
-    #         Y = [value]*2
-    #         plt.plot(X,Y,'--',label=label,color=color,**kwargs)
