@@ -199,19 +199,22 @@ class C_signal :
         """
         return int((t-self.t0)*self.fs)
 
-    def recut(self,t1: float=0,t2: float=None) :
+    def recut(self,t1: float=0,t2: float=None,t_before_end:float=None) :
         """
         Args
         -----
         `t1` : float
             Beginning of the recuted signal
-        `t2` : float (optional)
+        `t2` : float (default = None)
             End of the recuted signal, use None to keep the signal until the end
+        `t_before_end` : float (default = None)
+            if given, it will set `t2` to `end - t_before_end`
         """
         if t2 is None : t2 = self.t_max()
+        if t_before_end is not None : t2 = self.t_max() - t_before_end
 
-        if t1 < self.t_min() : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min
-        if self.t_max() < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max
+        if t1 < self.t_min() : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min()
+        if self.t_max() < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max()
 
         i1,i2 = self.index_at(t1), self.index_at(t2)
         rep = self.empty_copy()
@@ -238,6 +241,7 @@ class C_signal :
                     n_factor: float=None,
                     choose_next_power_of_2 = True,
                     print_choices = False,
+                    without_mean = False,
                     **kwargs):
         """
         Args 
@@ -249,6 +253,7 @@ class C_signal :
         `choose_next_power_of_2` : bool (default = True)
             If true use the newxt power of 2 istead of `n`
         `print_choices` : bool
+        `without_mean` : bool
 
         Return
         ------
@@ -271,12 +276,15 @@ class C_signal :
             print(f"FFT : n={n}, len(data)={self.N}")
 
         # FFT avec 0 padding sur n
-        yf = spf.rfft(self.data,n)
+        data = self.data
+        if without_mean : data -= data.mean()
+
+        yf = spf.rfft(data,n)
         xf = spf.rfftfreq(n,1/self.fs)
         return FFT_signal(  data = yf,
                             fs = 1/(xf[1]-xf[0]),
                             unit = '',
-                            name = f"{self.name} FFT",
+                            name = f"{self.name} FFT(no_mean)",
                             f0 = 0,
                             nb_zero = n - self.N,
                             window = None)
@@ -521,11 +529,11 @@ class T_signal:
         ----
         `data`: array | list
             time value for the vertical line
-        fs : float (default = 1)
+        `fs` : float (default = 1)
             Sampling frequency
-        unit : str (default = '')
-        name : str (default = '')
-        t0 : float (default = 0)        
+        `unit` : str (default = '')
+        `name` : str (default = '')
+        `t0` : float (default = 0)        
         """
         if from_sig is None: 
             self.SIG = C_signal(data=data,
@@ -568,16 +576,18 @@ class T_signal:
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
 
-    def recut(self,t1: float=0,t2: float=None) :
+    def recut(self,t1: float=0,t2: float=None,t_before_end:float=None) :
         """
         Args
         -----
         `t1` : float
             Beginning of the recuted signal
-        `t2` : float (optional)
+        `t2` : float (default = None)
             End of the recuted signal, use None to keep the signal until the end
+        `t_before_end` : float (default = None)
+            if given, it will set `t2` to `end - t_before_end`
         """
-        return T_signal(from_sig = self.SIG.recut(t1=t1,t2=t2))
+        return T_signal(from_sig = self.SIG.recut(t1=t1,t2=t2,t_before_end=t_before_end))
         
     def copy(self):
         return T_signal(from_sig=self.SIG.copy())
@@ -1123,8 +1133,15 @@ class FFT_signal :
         return new_sig
 
 
+    # @property
+    # def name(self): 
+    #     return self.name # TODO check if it is needed
 
-
+    # @name.setter
+    # def name(self,new_name):
+    #     self.name = new_name
+    #     self.Modul.name = f"{self.name} (FFT_modul)"
+    #     self.Phase.name = f"{self.name} (FFT_phase)"
 
 
 
