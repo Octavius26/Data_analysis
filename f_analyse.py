@@ -152,6 +152,7 @@ class C_signal :
                                 t2: float=None,
                                 extra_margin_y: float=0,
                                 extra_margin_x: float=0,
+                                t_before_end:float=None,
                                 **kwargs)->None: 
         """
         Add a box on a previous plot
@@ -165,8 +166,9 @@ class C_signal :
         `extra_margin_x` : float (default = 0)
         `extra_margin_y` : float (default = 0)
         """                               
-        if t1 is None : t1 = self.t_min
-        if t2 is None : t2 = self.t_max
+        if t1 is None : t1 = self.t_min()
+        if t2 is None : t2 = self.t_max()
+        if t_before_end is not None : t2 = self.t_max() - t_before_end
         yh = self.recut(t1,t2).max()
         yl = self.recut(t1,t2).min()
         e = yh-yl
@@ -212,7 +214,6 @@ class C_signal :
         """
         if t2 is None : t2 = self.t_max()
         if t_before_end is not None : t2 = self.t_max() - t_before_end
-
         if t1 < self.t_min() : print("Warning : t1 < t_min , we used t1 = t_min istead"); t1 = self.t_min()
         if self.t_max() < t2 : print("Warning : t_max < t2 , we used t2 = t_max istead"); t2 = self.t_max()
 
@@ -461,6 +462,9 @@ class C_signal :
         new_sig.name = f"- {self.name}"
         return new_sig
 
+    def delete_offset(self):
+        self.data -= self.data.mean()
+        self.name += " No offset"
 
 
 
@@ -556,6 +560,8 @@ class T_signal:
         self.duration = self.SIG.duration
         self.t_max = self.SIG.t_max
         self.t_min = self.SIG.t_min
+        self.delete_offset = self.SIG.delete_offset
+
 
         self.plot = self.SIG.plot
 
@@ -576,7 +582,10 @@ class T_signal:
         self.index_at = self.SIG.index_at
         self.N = self.SIG.N
 
-    def recut(self,t1: float=0,t2: float=None,t_before_end:float=None) :
+    def recut(self,
+              t1: float=0,
+              t2: float=None,
+              t_before_end: float=None)-> T_signal :
         """
         Args
         -----
@@ -817,6 +826,7 @@ class F_signal:
         self.f_range = self.SIG.duration #TODO check it
         self.f_max = self.SIG.t_max
         self.f_min = self.SIG.t_min
+        self.delete_offset = self.SIG.delete_offset
 
         # self.plot = self.SIG.plot
 
@@ -1128,7 +1138,7 @@ class FFT_signal :
         new_sig = T_signal( data = t_data,
                             fs = (self.f_max()-1/self.fs)*2,
                             unit = '?',
-                            name = f"{self.name}_from_FFT",
+                            name = f"{self.name} (to_time)",
                             t0 = 0)
         return new_sig
 
