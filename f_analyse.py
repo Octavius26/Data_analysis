@@ -95,7 +95,9 @@ class C_signal :
         """
 
         if data is None : self.data = None
-        elif type(data)==np.ndarray : self.data = data 
+        elif type(data)==np.ndarray : 
+            self.data = data 
+            if self.data.dtype != 'float64' : self.data = self.data.astype('float64')
         elif type(data)==list : self.data = np.array(data)
         else : warn("Wrong data type")
 
